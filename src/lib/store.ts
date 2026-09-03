@@ -5,6 +5,22 @@ import { todayISO } from "./format";
 
 const KEY_CREANCES = "goodluck.creances.v1";
 const KEY_SESSION = "goodluck.session.v1";
+const KEY_SEED_VERSION = "goodluck.seedVersion.v1";
+
+/**
+ * À incrémenter chaque fois que le jeu de données initial évolue
+ * (nouvelle créance importée, correction d'un montant, etc.).
+ * v2 : ajout de la créance supplémentaire de Mr Tushar (731 850 FCFA).
+ */
+const SEED_VERSION = 2;
+
+function writeSeedVersion(v: number) {
+  try {
+    localStorage.setItem(KEY_SEED_VERSION, String(v));
+  } catch {
+    /* stockage indisponible */
+  }
+}
 
 export const USER = "EtsGoodluck";
 export const PASS = "CG86965555";
@@ -17,16 +33,36 @@ export function uid(): string {
 }
 
 function load(): Creance[] {
+  let saved: Creance[] | null = null;
+  let version = 0;
   try {
     const raw = localStorage.getItem(KEY_CREANCES);
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) return parsed as Creance[];
+      if (Array.isArray(parsed)) saved = parsed as Creance[];
     }
+    version = Number(localStorage.getItem(KEY_SEED_VERSION)) || 0;
   } catch {
     /* données corrompues → on repart du jeu initial */
+    saved = null;
   }
-  return seedCreances;
+
+  // Premier lancement : on charge l'intégralité du jeu initial.
+  if (saved === null) {
+    writeSeedVersion(SEED_VERSION);
+    return seedCreances;
+  }
+
+  // Mise à jour du jeu de données : les nouvelles créances initiales
+  // absentes sont réinjectées, sans toucher aux fiches déjà présentes
+  // (ni aux créances ajoutées/modifiées par l'utilisateur).
+  if (version < SEED_VERSION) {
+    const ids = new Set(saved.map((c) => c.id));
+    const manquantes = seedCreances.filter((c) => !ids.has(c.id));
+    if (manquantes.length > 0) saved = [...manquantes, ...saved];
+    writeSeedVersion(SEED_VERSION);
+  }
+  return saved;
 }
 
 export function useCreances() {

@@ -1,7 +1,9 @@
 import type { Creance } from "../types";
 
 /**
- * 20 créances réelles importées depuis la fiche « PendingList.xlsm ».
+ * 20 créances réelles importées depuis la fiche « PendingList.xlsm »,
+ * + la créance supplémentaire de Mr Tushar (731 850 FCFA) ajoutée
+ *   à la demande de l'utilisateur.
  * Chargées automatiquement au premier lancement de l'application.
  */
 const base: Omit<
@@ -303,5 +305,20 @@ export const seedCreances: Creance[] = [
     montantRegle: 150000,
     prochaineActionTexte: "Rappel",
     prochaineActionDate: "2026-09-05",
+  },
+  {
+    // Créance supplémentaire ajoutée à la demande de l'utilisateur.
+    id: "gl-21",
+    ...base,
+    nomClient: "Mr Tushar",
+    typeEtab: "Particulier",
+    adresse: "Camp Clairon",
+    telephone: "05 777 66 66",
+    responsableClient: "Mr Tushar",
+    agent: "Manu",
+    dateAchat: null,
+    montantTotal: 731850,
+    montantRegle: 0,
+    remarques: "Dette supplémentaire enregistrée à la demande de GoodLuck.",
   },
 ];

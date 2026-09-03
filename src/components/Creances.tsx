@@ -420,7 +420,13 @@ export default function Creances({
                           {c.agent || <span className="text-slate-300">—</span>}
                         </td>
                         <td className="px-3 py-3 border-b border-slate-100 align-top text-slate-600 whitespace-nowrap">
-                          {fmtDate(c.dateAchat)}
+                          {c.dateAchat ? (
+                            fmtDate(c.dateAchat)
+                          ) : (
+                            <span className="inline-flex items-center rounded px-1.5 py-0.5 text-[11px] font-medium bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-200">
+                              Inconnue
+                            </span>
+                          )}
                         </td>
                         <td className="px-3 py-3 border-b border-slate-100 align-top whitespace-nowrap">
                           {c.dateEcheance ? (
@@ -626,7 +632,7 @@ export default function Creances({
                     <div className="mt-3 space-y-1.5 text-xs text-slate-600">
                       <p className="flex items-center gap-1.5">
                         <IconCalendar className="w-3.5 h-3.5 text-slate-400" />
-                        Achat : {fmtDate(c.dateAchat)}
+                        Achat : {c.dateAchat ? fmtDate(c.dateAchat) : "inconnue"}
                         {c.dateEcheance && (
                           <span className="text-slate-400">
                             · Échéance : {fmtDate(c.dateEcheance)}
