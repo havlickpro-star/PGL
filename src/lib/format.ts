@@ -53,3 +53,28 @@ export function pct(part: number, total: number): number {
   if (total <= 0) return 0;
   return Math.round((part / total) * 100);
 }
+
+/** « 2026-02-11T14:32 » → « 11/02/2026 à 14:32 » */
+export function fmtDateTime(iso: string): string {
+  const [d, t] = iso.split("T");
+  return `${fmtDate(d)}${t ? ` à ${t}` : ""}`;
+}
+
+/** Horodatage local au format ISO minute. */
+export function nowISO(): string {
+  const d = new Date();
+  const h = String(d.getHours()).padStart(2, "0");
+  const m = String(d.getMinutes()).padStart(2, "0");
+  return `${todayISO()}T${h}:${m}`;
+}
+
+/** Extrait la valeur numérique d'une référence (« #007 » → 7). */
+export function refNum(ref: string | undefined): number {
+  if (!ref) return 0;
+  return parseInt(ref.replace(/\D/g, ""), 10) || 0;
+}
+
+/** Formate un numéro en référence (« 7 » → « #007 »). */
+export function fmtRef(n: number): string {
+  return `#${String(n).padStart(3, "0")}`;
+}

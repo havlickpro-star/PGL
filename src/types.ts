@@ -27,6 +27,8 @@ export type Reaction = (typeof REACTIONS)[number] | "";
 
 export interface Creance {
   id: string;
+  /** Référence unique visible (ex. #001) — relie tous les événements de la créance */
+  ref: string;
   /** Nom de l'établissement / du client */
   nomClient: string;
   typeEtab: TypeEtablissement;
@@ -49,7 +51,30 @@ export interface Creance {
   prochaineActionTexte: string;
   prochaineActionDate: string | null;
   remarques: string;
+  /** Journal chronologique : création, paiements, relances, changements de statut… */
+  historique: Evenement[];
 }
+
+export type EvenementType =
+  | "creation"
+  | "paiement"
+  | "relance"
+  | "statut"
+  | "modification";
+
+export interface Evenement {
+  id: string;
+  /** Horodatage ISO (yyyy-mm-ddTHH:MM) */
+  date: string;
+  type: EvenementType;
+  titre: string;
+  detail?: string;
+}
+
+/** Données issues du formulaire — l'application complète id, ref et historique. */
+export type DonneesCreance = Omit<Creance, "id" | "ref" | "historique"> & {
+  id?: string;
+};
 
 export interface StatutMeta {
   /** classes du badge */

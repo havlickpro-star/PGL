@@ -143,9 +143,10 @@ body {
     transition: all 0.15s ease;
     cursor: pointer;
   }
-  .icon-btn:hover { background: #e2e8f0; color: #0f172a; }
-  .icon-btn-danger:hover { background: #fee2e2; color: #dc2626; }
-
+.icon-btn:hover { background: #e2e8f0; color: #0f172a; }
+.icon-btn-danger:hover { background: #fee2e2; color: #dc2626; }
+.icon-btn-pay { color: #059669; }
+.icon-btn-pay:hover { background: #d1fae5; color: #047857; }
   /* ---- Champs de formulaire ---- */
   .field {
     width: 100%;

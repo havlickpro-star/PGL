@@ -8,7 +8,13 @@ import type { Creance } from "../types";
  */
 const base: Omit<
   Creance,
-  "id" | "nomClient" | "typeEtab" | "montantTotal" | "montantRegle"
+  | "id"
+  | "ref"
+  | "historique"
+  | "nomClient"
+  | "typeEtab"
+  | "montantTotal"
+  | "montantRegle"
 > = {
   adresse: "",
   telephone: "",
@@ -25,7 +31,7 @@ const base: Omit<
   remarques: "",
 };
 
-export const seedCreances: Creance[] = [
+export const seedCreances: Omit<Creance, "ref" | "historique">[] = [
   {
     id: "gl-01",
     ...base,

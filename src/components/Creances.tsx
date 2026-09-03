@@ -2,15 +2,17 @@ import { useMemo, useState } from "react";
 import type { Creance, Statut } from "../types";
 import { STATUT_META, STATUTS, solde } from "../types";
 import { fcfa, fmtDate, relativeLabel, todayISO } from "../lib/format";
-import { calcTotaux } from "../lib/selectors";
+import { calcTotaux, effectiveStatut, estPartiel } from "../lib/selectors";
 import { EmptyState, StatutBadge, TypeChip } from "./ui";
 import {
   IconArrowDown,
   IconArrowUp,
   IconArrowUpDown,
+  IconBanknote,
   IconBell,
   IconCalendar,
   IconChevronDown,
+  IconEye,
   IconFilterX,
   IconPencil,
   IconPhone,
@@ -44,6 +46,8 @@ interface Props {
   onEdit: (c: Creance) => void;
   onDelete: (c: Creance) => void;
   onRelancer: (c: Creance) => void;
+  onPayer: (c: Creance) => void;
+  onDetail: (c: Creance) => void;
 }
 
 function SortableTh({
@@ -90,12 +94,22 @@ function SortableTh({
   );
 }
 
+function PartielChip() {
+  return (
+    <span className="inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-semibold bg-slate-200 text-slate-600 whitespace-nowrap">
+      Paiement partiel
+    </span>
+  );
+}
+
 export default function Creances({
   creances,
   onNew,
   onEdit,
   onDelete,
   onRelancer,
+  onPayer,
+  onDetail,
 }: Props) {
   const [q, setQ] = useState("");
   const [fStatut, setFStatut] = useState<"Tous" | Statut>("Tous");
@@ -116,11 +130,9 @@ export default function Creances({
   );
   const agents = useMemo(
     () =>
-      [
-        ...new Set(
-          creances.map((c) => c.agent.trim()).filter((a) => a.length > 0)
-        ),
-      ].sort((a, b) => a.localeCompare(b)),
+      [...new Set(creances.map((c) => c.agent.trim()).filter((a) => a.length > 0))].sort(
+        (a, b) => a.localeCompare(b)
+      ),
     [creances]
   );
 
@@ -147,7 +159,7 @@ export default function Creances({
     const needle = q.trim().toLowerCase();
     const filtered = creances.filter((c) => {
       if (needle && !c.nomClient.toLowerCase().includes(needle)) return false;
-      if (fStatut !== "Tous" && c.statut !== fStatut) return false;
+      if (fStatut !== "Tous" && effectiveStatut(c) !== fStatut) return false;
       if (fEtab !== "Tous" && c.nomClient.trim() !== fEtab) return false;
       if (fAgent !== "Tous" && c.agent.trim() !== fAgent) return false;
       return true;
@@ -155,8 +167,7 @@ export default function Creances({
     const dir = sortDir === "asc" ? 1 : -1;
     return [...filtered].sort((a, b) => {
       if (sortKey === "solde") return (solde(a) - solde(b)) * dir;
-      if (sortKey === "montantTotal")
-        return (a.montantTotal - b.montantTotal) * dir;
+      if (sortKey === "montantTotal") return (a.montantTotal - b.montantTotal) * dir;
       if (sortKey === "dateEcheance") {
         if (!a.dateEcheance && !b.dateEcheance) return 0;
         if (!a.dateEcheance) return 1;
@@ -189,14 +200,14 @@ export default function Creances({
 
   return (
     <div className="space-y-4">
-      {/* Barre d'outils : recherche + filtres + tri */}
+      {/* Barre d'outils */}
       <div className="card p-3 flex flex-wrap items-center gap-2.5 animate-fade-up">
         <div className="relative grow basis-[220px]">
           <IconSearch className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
             type="search"
             className="field pl-9 pr-8"
-            placeholder="Rechercher par nom de client…"
+            placeholder="Rechercher par nom de client ou référence (#001)…"
             value={q}
             onChange={(e) => setQ(e.target.value)}
           />
@@ -260,7 +271,6 @@ export default function Creances({
           </button>
         )}
 
-        {/* Tri (mobile) */}
         <div className="flex md:hidden items-center gap-1.5 basis-full sm:basis-auto sm:ml-auto">
           <select
             className="field w-auto grow"
@@ -312,9 +322,12 @@ export default function Creances({
             style={{ animationDelay: "80ms" }}
           >
             <div className="overflow-x-auto scroll-thin">
-              <table className="w-full text-sm min-w-[1180px] border-separate border-spacing-0">
+              <table className="w-full text-sm min-w-[1260px] border-separate border-spacing-0">
                 <thead>
                   <tr>
+                    <th className="px-3 py-2.5 text-left text-[11px] font-bold uppercase tracking-wider text-slate-500 bg-slate-50 border-b border-slate-200">
+                      N°
+                    </th>
                     <th className="px-3 py-2.5 text-left text-[11px] font-bold uppercase tracking-wider text-slate-500 bg-slate-50 border-b border-slate-200">
                       Client
                     </th>
@@ -324,39 +337,13 @@ export default function Creances({
                     <th className="px-3 py-2.5 text-left text-[11px] font-bold uppercase tracking-wider text-slate-500 bg-slate-50 border-b border-slate-200">
                       Agent
                     </th>
-                    <SortableTh
-                      label="Achat"
-                      k="dateAchat"
-                      sortKey={sortKey}
-                      sortDir={sortDir}
-                      onSort={toggleSort}
-                    />
-                    <SortableTh
-                      label="Échéance"
-                      k="dateEcheance"
-                      sortKey={sortKey}
-                      sortDir={sortDir}
-                      onSort={toggleSort}
-                    />
-                    <SortableTh
-                      label="Total"
-                      k="montantTotal"
-                      sortKey={sortKey}
-                      sortDir={sortDir}
-                      onSort={toggleSort}
-                      alignRight
-                    />
+                    <SortableTh label="Achat" k="dateAchat" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+                    <SortableTh label="Échéance" k="dateEcheance" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+                    <SortableTh label="Total" k="montantTotal" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} alignRight />
                     <th className="px-3 py-2.5 text-right text-[11px] font-bold uppercase tracking-wider text-slate-500 bg-slate-50 border-b border-slate-200">
                       Réglé
                     </th>
-                    <SortableTh
-                      label="Solde dû"
-                      k="solde"
-                      sortKey={sortKey}
-                      sortDir={sortDir}
-                      onSort={toggleSort}
-                      alignRight
-                    />
+                    <SortableTh label="Solde dû" k="solde" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} alignRight />
                     <th className="px-3 py-2.5 text-left text-[11px] font-bold uppercase tracking-wider text-slate-500 bg-slate-50 border-b border-slate-200">
                       Relances
                     </th>
@@ -374,11 +361,11 @@ export default function Creances({
                 <tbody>
                   {sorted.map((c) => {
                     const s = solde(c);
-                    const meta = STATUT_META[c.statut];
+                    const eff = effectiveStatut(c);
+                    const meta = STATUT_META[eff];
+                    const partiel = estPartiel(c);
                     const actionDepassee =
-                      !!c.prochaineActionDate &&
-                      c.prochaineActionDate < today &&
-                      s > 0;
+                      !!c.prochaineActionDate && c.prochaineActionDate < today && s > 0;
                     const echeanceDepassee =
                       !!c.dateEcheance && c.dateEcheance < today && s > 0;
                     return (
@@ -388,9 +375,16 @@ export default function Creances({
                             className="absolute left-0 top-0 bottom-0 w-[3px]"
                             style={{ background: meta.accent }}
                           />
-                          <p className="font-semibold text-slate-900 leading-snug">
-                            {c.nomClient}
-                          </p>
+                          <button
+                            className="font-mono text-[12.5px] font-semibold text-brand-700 hover:text-brand-900 hover:underline"
+                            onClick={() => onDetail(c)}
+                            title="Ouvrir la fiche détaillée et l'historique"
+                          >
+                            {c.ref}
+                          </button>
+                        </td>
+                        <td className="px-3 py-3 border-b border-slate-100 align-top">
+                          <p className="font-semibold text-slate-900 leading-snug">{c.nomClient}</p>
                           <div className="flex items-center gap-1.5 mt-1 flex-wrap">
                             <TypeChip type={c.typeEtab} />
                             {c.adresse && (
@@ -420,23 +414,11 @@ export default function Creances({
                           {c.agent || <span className="text-slate-300">—</span>}
                         </td>
                         <td className="px-3 py-3 border-b border-slate-100 align-top text-slate-600 whitespace-nowrap">
-                          {c.dateAchat ? (
-                            fmtDate(c.dateAchat)
-                          ) : (
-                            <span className="inline-flex items-center rounded px-1.5 py-0.5 text-[11px] font-medium bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-200">
-                              Inconnue
-                            </span>
-                          )}
+                          {c.dateAchat ? fmtDate(c.dateAchat) : <span className="text-slate-400 italic">inconnue</span>}
                         </td>
                         <td className="px-3 py-3 border-b border-slate-100 align-top whitespace-nowrap">
                           {c.dateEcheance ? (
-                            <span
-                              className={
-                                echeanceDepassee
-                                  ? "text-red-700 font-semibold"
-                                  : "text-slate-600"
-                              }
-                            >
+                            <span className={echeanceDepassee ? "text-red-700 font-semibold" : "text-slate-600"}>
                               {fmtDate(c.dateEcheance)}
                             </span>
                           ) : (
@@ -465,6 +447,7 @@ export default function Creances({
                               className="btn btn-ghost btn-sm px-2"
                               onClick={() => onRelancer(c)}
                               title="Enregistrer une relance aujourd'hui"
+                              disabled={eff === "Soldé"}
                             >
                               <IconBell className="w-3.5 h-3.5" />
                               +1
@@ -477,16 +460,17 @@ export default function Creances({
                           )}
                         </td>
                         <td className="px-3 py-3 border-b border-slate-100 align-top">
-                          <StatutBadge statut={c.statut} />
+                          <div className="flex flex-col items-start gap-1">
+                            <StatutBadge statut={eff} />
+                            {partiel && <PartielChip />}
+                          </div>
                         </td>
                         <td className="px-3 py-3 border-b border-slate-100 align-top max-w-[170px]">
                           {c.prochaineActionDate ? (
                             <>
                               <p
                                 className={`flex items-center gap-1.5 whitespace-nowrap ${
-                                  actionDepassee
-                                    ? "text-red-700 font-semibold"
-                                    : "text-slate-700"
+                                  actionDepassee ? "text-red-700 font-semibold" : "text-slate-700"
                                 }`}
                               >
                                 <IconCalendar className="w-3.5 h-3.5 shrink-0" />
@@ -494,9 +478,7 @@ export default function Creances({
                               </p>
                               <p
                                 className={`text-[11px] mt-0.5 ${
-                                  actionDepassee
-                                    ? "text-red-600 font-semibold"
-                                    : "text-slate-400"
+                                  actionDepassee ? "text-red-600 font-semibold" : "text-slate-400"
                                 }`}
                               >
                                 {c.prochaineActionTexte
@@ -510,6 +492,22 @@ export default function Creances({
                         </td>
                         <td className="px-3 py-3 border-b border-slate-100 align-top">
                           <div className="flex items-center gap-0.5">
+                            <button
+                              className={`icon-btn ${s === 0 ? "opacity-35 cursor-not-allowed" : "icon-btn-pay"}`}
+                              onClick={() => s > 0 && onPayer(c)}
+                              title={s === 0 ? "Créance soldée — rien à encaisser" : "Enregistrer un paiement"}
+                              aria-label={`Enregistrer un paiement pour ${c.nomClient}`}
+                            >
+                              <IconBanknote className="w-4 h-4" />
+                            </button>
+                            <button
+                              className="icon-btn"
+                              onClick={() => onDetail(c)}
+                              title="Fiche détaillée & historique"
+                              aria-label={`Voir la fiche de ${c.nomClient}`}
+                            >
+                              <IconEye className="w-4 h-4" />
+                            </button>
                             <button
                               className="icon-btn"
                               onClick={() => onEdit(c)}
@@ -543,21 +541,15 @@ export default function Creances({
               <div className="flex flex-wrap gap-x-5 gap-y-1 text-xs text-slate-500">
                 <span>
                   Accordé :{" "}
-                  <b className="font-mono text-slate-800">
-                    {fcfa(tFiltered.accorde)}
-                  </b>
+                  <b className="font-mono text-slate-800">{fcfa(tFiltered.accorde)}</b>
                 </span>
                 <span>
                   Réglé :{" "}
-                  <b className="font-mono text-emerald-700">
-                    {fcfa(tFiltered.regle)}
-                  </b>
+                  <b className="font-mono text-emerald-700">{fcfa(tFiltered.regle)}</b>
                 </span>
                 <span>
                   Reste dû :{" "}
-                  <b className="font-mono text-red-700">
-                    {fcfa(tFiltered.du)}
-                  </b>
+                  <b className="font-mono text-red-700">{fcfa(tFiltered.du)}</b>
                 </span>
               </div>
             </div>
@@ -567,12 +559,12 @@ export default function Creances({
           <div className="md:hidden space-y-3">
             {sorted.map((c, i) => {
               const s = solde(c);
-              const meta = STATUT_META[c.statut];
+              const eff = effectiveStatut(c);
+              const meta = STATUT_META[eff];
+              const partiel = estPartiel(c);
               const open = expanded === c.id;
               const actionDepassee =
-                !!c.prochaineActionDate &&
-                c.prochaineActionDate < today &&
-                s > 0;
+                !!c.prochaineActionDate && c.prochaineActionDate < today && s > 0;
               return (
                 <div
                   key={c.id}
@@ -584,41 +576,43 @@ export default function Creances({
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
                         <p className="font-display font-semibold text-slate-900 leading-snug">
+                          <button
+                            className="font-mono text-xs font-bold text-brand-700 mr-1.5 hover:underline"
+                            onClick={() => onDetail(c)}
+                            title="Fiche détaillée & historique"
+                          >
+                            {c.ref}
+                          </button>
                           {c.nomClient}
                         </p>
                         <div className="flex items-center gap-1.5 mt-1 flex-wrap">
                           <TypeChip type={c.typeEtab} />
                           {c.adresse && (
-                            <span className="text-[11px] text-slate-400">
-                              {c.adresse}
-                            </span>
+                            <span className="text-[11px] text-slate-400">{c.adresse}</span>
                           )}
                         </div>
                       </div>
-                      <StatutBadge statut={c.statut} />
+                      <div className="flex flex-col items-end gap-1">
+                        <StatutBadge statut={eff} />
+                        {partiel && <PartielChip />}
+                      </div>
                     </div>
 
                     <div className="grid grid-cols-3 gap-2 mt-3">
                       <div className="rounded-lg bg-white/70 border border-slate-100 px-2.5 py-2">
-                        <p className="text-[10px] font-bold uppercase text-slate-400">
-                          Total
-                        </p>
+                        <p className="text-[10px] font-bold uppercase text-slate-400">Total</p>
                         <p className="font-mono text-[12.5px] font-semibold text-slate-800 mt-0.5">
                           {fcfa(c.montantTotal)}
                         </p>
                       </div>
                       <div className="rounded-lg bg-white/70 border border-slate-100 px-2.5 py-2">
-                        <p className="text-[10px] font-bold uppercase text-emerald-600/70">
-                          Réglé
-                        </p>
+                        <p className="text-[10px] font-bold uppercase text-emerald-600/70">Réglé</p>
                         <p className="font-mono text-[12.5px] font-semibold text-emerald-700 mt-0.5">
                           {fcfa(c.montantRegle)}
                         </p>
                       </div>
                       <div className="rounded-lg bg-white/70 border border-slate-100 px-2.5 py-2">
-                        <p className="text-[10px] font-bold uppercase text-red-600/70">
-                          Reste dû
-                        </p>
+                        <p className="text-[10px] font-bold uppercase text-red-600/70">Reste dû</p>
                         <p
                           className={`font-mono text-[12.5px] font-semibold mt-0.5 ${
                             s > 0 ? "text-red-700" : "text-slate-400"
@@ -634,27 +628,19 @@ export default function Creances({
                         <IconCalendar className="w-3.5 h-3.5 text-slate-400" />
                         Achat : {c.dateAchat ? fmtDate(c.dateAchat) : "inconnue"}
                         {c.dateEcheance && (
-                          <span className="text-slate-400">
-                            · Échéance : {fmtDate(c.dateEcheance)}
-                          </span>
+                          <span className="text-slate-400">· Échéance : {fmtDate(c.dateEcheance)}</span>
                         )}
                       </p>
                       {c.prochaineActionDate && (
                         <p
                           className={`flex items-center gap-1.5 ${
-                            actionDepassee
-                              ? "text-red-700 font-semibold"
-                              : ""
+                            actionDepassee ? "text-red-700 font-semibold" : ""
                           }`}
                         >
                           <IconBell className="w-3.5 h-3.5" />
-                          {c.prochaineActionTexte
-                            ? `${c.prochaineActionTexte} · `
-                            : ""}
+                          {c.prochaineActionTexte ? `${c.prochaineActionTexte} · ` : ""}
                           {fmtDate(c.prochaineActionDate)}
-                          <span className="font-medium">
-                            ({relativeLabel(c.prochaineActionDate)})
-                          </span>
+                          <span className="font-medium">({relativeLabel(c.prochaineActionDate)})</span>
                         </p>
                       )}
                     </div>
@@ -665,11 +651,12 @@ export default function Creances({
                           ["Téléphone", c.telephone],
                           ["Responsable client", c.responsableClient],
                           ["Agent GoodLuck", c.agent],
-                          ["Dernière relance", fmtDate(c.dateDerniereRelance)],
+                          ["Dernière relance", c.dateDerniereRelance ? fmtDate(c.dateDerniereRelance) : ""],
+                          ["Nombre de relances", String(c.nombreRelances)],
                           ["Réaction client", c.reaction],
                           ["Remarques", c.remarques],
                         ]
-                          .filter(([, v]) => v && v !== "—")
+                          .filter(([, v]) => v !== "" && v !== "—")
                           .map(([k, v]) => (
                             <div key={k} className={k === "Remarques" ? "col-span-2" : ""}>
                               <dt className="font-bold text-slate-400 text-[10px] uppercase tracking-wide">
@@ -681,7 +668,24 @@ export default function Creances({
                       </dl>
                     )}
 
-                    <div className="flex items-center gap-2 mt-3.5 pt-3 border-t border-slate-200/70">
+                    <div className="flex flex-wrap items-center gap-2 mt-3.5 pt-3 border-t border-slate-200/70">
+                      <button
+                        className="btn btn-primary btn-sm"
+                        onClick={() => onPayer(c)}
+                        disabled={s === 0}
+                        title={s === 0 ? "Créance soldée" : "Enregistrer un paiement"}
+                      >
+                        <IconBanknote className="w-3.5 h-3.5" />
+                        Payer
+                      </button>
+                      <button
+                        className="btn btn-ghost btn-sm"
+                        onClick={() => onRelancer(c)}
+                        disabled={eff === "Soldé"}
+                      >
+                        <IconBell className="w-3.5 h-3.5" />
+                        Relancer +1
+                      </button>
                       <button
                         className="btn btn-ghost btn-sm"
                         onClick={() => setExpanded(open ? null : c.id)}
@@ -689,29 +693,16 @@ export default function Creances({
                         <IconChevronDown
                           className={`w-3.5 h-3.5 transition-transform ${open ? "rotate-180" : ""}`}
                         />
-                        {open ? "Moins de détails" : "Détails"}
+                        {open ? "Moins" : "Détails"}
                       </button>
-                      <div className="flex items-center gap-1.5 ml-auto">
-                        <button
-                          className="btn btn-ghost btn-sm"
-                          onClick={() => onRelancer(c)}
-                          title="Enregistrer une relance aujourd'hui"
-                        >
-                          <IconBell className="w-3.5 h-3.5" />
-                          Relancer +1
+                      <div className="flex items-center gap-1 ml-auto">
+                        <button className="icon-btn" onClick={() => onDetail(c)} aria-label="Fiche détaillée">
+                          <IconEye className="w-4 h-4" />
                         </button>
-                        <button
-                          className="icon-btn"
-                          onClick={() => onEdit(c)}
-                          aria-label="Modifier"
-                        >
+                        <button className="icon-btn" onClick={() => onEdit(c)} aria-label="Modifier">
                           <IconPencil className="w-4 h-4" />
                         </button>
-                        <button
-                          className="icon-btn icon-btn-danger"
-                          onClick={() => onDelete(c)}
-                          aria-label="Supprimer"
-                        >
+                        <button className="icon-btn icon-btn-danger" onClick={() => onDelete(c)} aria-label="Supprimer">
                           <IconTrash className="w-4 h-4" />
                         </button>
                       </div>
@@ -724,9 +715,7 @@ export default function Creances({
               {sorted.length} créance{sorted.length > 1 ? "s" : ""} affichée
               {sorted.length > 1 ? "s" : ""}
               {hasFilters && ` (sur ${creances.length})`} · Reste dû :{" "}
-              <span className="font-mono font-semibold text-red-700">
-                {fcfa(tFiltered.du)}
-              </span>
+              <span className="font-mono font-semibold text-red-700">{fcfa(tFiltered.du)}</span>
             </p>
           </div>
         </>

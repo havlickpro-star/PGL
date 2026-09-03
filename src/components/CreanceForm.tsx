@@ -1,11 +1,10 @@
 import { useState } from "react";
 import type { FormEvent, ReactNode } from "react";
-import type { Creance, Reaction, Statut, TypeEtablissement } from "../types";
+import type { Creance, DonneesCreance, Reaction, Statut, TypeEtablissement } from "../types";
 import { REACTIONS, STATUTS, TYPES_ETABLISSEMENT } from "../types";
-import { uid } from "../lib/store";
 import { fcfa } from "../lib/format";
 import { Modal } from "./ui";
-import { IconCheck } from "./icons";
+import { IconCheck, IconInfo } from "./icons";
 
 interface FormState {
   nomClient: string;
@@ -43,7 +42,7 @@ function Field({
   className?: string;
 }) {
   return (
-    <label className={`block ${className}`}>
+    <div className={className}>
       <span className="block text-xs font-semibold text-slate-600 mb-1.5">
         {label}
         {required && <span className="text-red-600"> *</span>}
@@ -57,7 +56,7 @@ function Field({
           {error}
         </span>
       )}
-    </label>
+    </div>
   );
 }
 
@@ -78,7 +77,7 @@ export default function CreanceForm({
   onClose,
 }: {
   initial: Creance | null;
-  onSave: (c: Creance) => void;
+  onSave: (d: DonneesCreance) => void;
   onClose: () => void;
 }) {
   const [f, setF] = useState<FormState>(() => ({
@@ -100,12 +99,17 @@ export default function CreanceForm({
     prochaineActionDate: initial?.prochaineActionDate ?? "",
     remarques: initial?.remarques ?? "",
   }));
-  const [errors, setErrors] = useState<{ nom?: string; montants?: string }>(
-    {}
-  );
+  const [errors, setErrors] = useState<{
+    nom?: string;
+    montants?: string;
+    statut?: string;
+  }>({});
 
   function set<K extends keyof FormState>(k: K, v: FormState[K]) {
     setF((p) => ({ ...p, [k]: v }));
+    if (k === "statut") setErrors((e) => ({ ...e, statut: undefined }));
+    if (k === "montantTotal" || k === "montantRegle")
+      setErrors((e) => ({ ...e, montants: undefined, statut: undefined }));
   }
 
   const totalNum = Number(f.montantTotal);
@@ -116,7 +120,7 @@ export default function CreanceForm({
 
   function submit(e: FormEvent) {
     e.preventDefault();
-    const errs: { nom?: string; montants?: string } = {};
+    const errs: { nom?: string; montants?: string; statut?: string } = {};
     if (!f.nomClient.trim())
       errs.nom = "Le nom de l'établissement / du client est obligatoire.";
     const total = Number(f.montantTotal);
@@ -129,11 +133,23 @@ export default function CreanceForm({
       errs.montants =
         "Le montant déjà réglé ne peut pas dépasser le montant total.";
     }
+
+    const s = total - regle;
+    // Cohérence : « Soldé » exige un solde réellement à 0.
+    if (!errs.montants && f.statut === "Soldé" && s > 0) {
+      errs.statut = `Impossible de passer en « Soldé » : le solde restant dû est encore de ${fcfa(s)}. Enregistrez d'abord un paiement (bouton « Payer ») couvrant ce solde.`;
+    }
+
     setErrors(errs);
     if (Object.keys(errs).length > 0) return;
 
+    // Ajustements automatiques pour garantir un état toujours cohérent.
+    let statut = f.statut;
+    if (s <= 0) statut = "Soldé";
+    else if (regle > 0 && statut === "Non échu") statut = "Paiement partiel";
+
     onSave({
-      id: initial?.id ?? uid(),
+      ...(initial?.id ? { id: initial.id } : {}),
       nomClient: f.nomClient.trim(),
       typeEtab: f.typeEtab,
       adresse: f.adresse.trim(),
@@ -147,19 +163,21 @@ export default function CreanceForm({
       dateDerniereRelance: f.dateDerniereRelance || null,
       nombreRelances: Math.max(0, Math.floor(Number(f.nombreRelances) || 0)),
       reaction: f.reaction,
-      statut: f.statut,
+      statut,
       prochaineActionTexte: f.prochaineActionTexte.trim(),
       prochaineActionDate: f.prochaineActionDate || null,
       remarques: f.remarques.trim(),
     });
   }
 
+  const soldeZero = Number.isFinite(totalNum) && soldeCalc <= 0 && f.montantTotal !== "";
+
   return (
     <Modal
-      title={initial ? "Modifier la créance" : "Nouvelle créance"}
+      title={initial ? `Modifier la créance ${initial.ref}` : "Nouvelle créance"}
       subtitle={
         initial
-          ? `${initial.nomClient} — achat du ${initial.dateAchat ? initial.dateAchat.split("-").reverse().join("/") : "date inconnue"}`
+          ? `${initial.nomClient} — le solde et le statut restent cohérents automatiquement.`
           : "Consignez une nouvelle vente à crédit. Le solde est calculé automatiquement."
       }
       onClose={onClose}
@@ -180,11 +198,7 @@ export default function CreanceForm({
         <section>
           <SectionTitle n="1">Client &amp; établissement</SectionTitle>
           <div className="grid sm:grid-cols-2 gap-4 mt-3.5">
-            <Field
-              label="Nom de l'établissement / client"
-              required
-              error={errors.nom}
-            >
+            <Field label="Nom de l'établissement / client" required error={errors.nom}>
               <input
                 type="text"
                 className={`field ${errors.nom ? "field-error" : ""}`}
@@ -197,9 +211,7 @@ export default function CreanceForm({
               <select
                 className="field"
                 value={f.typeEtab}
-                onChange={(e) =>
-                  set("typeEtab", e.target.value as TypeEtablissement)
-                }
+                onChange={(e) => set("typeEtab", e.target.value as TypeEtablissement)}
               >
                 {TYPES_ETABLISSEMENT.map((t) => (
                   <option key={t} value={t}>
@@ -226,10 +238,7 @@ export default function CreanceForm({
                 onChange={(e) => set("telephone", e.target.value)}
               />
             </Field>
-            <Field
-              label="Responsable (validation côté client)"
-              className="sm:col-span-2"
-            >
+            <Field label="Responsable (validation côté client)" className="sm:col-span-2">
               <input
                 type="text"
                 className="field"
@@ -277,6 +286,7 @@ export default function CreanceForm({
             <Field
               label="Montant déjà réglé (FCFA)"
               error={errors.montants}
+              hint="Pour un nouveau paiement ponctuel, préférez le bouton « Payer » de la fiche."
             >
               <input
                 type="number"
@@ -308,7 +318,7 @@ export default function CreanceForm({
             </div>
             <Field
               label="Date d'échéance convenue"
-              hint="Au-delà de cette date, la créance est considérée comme échue."
+              hint="Au-delà de cette date, la créance passe automatiquement « En retard » (si solde > 0)."
             >
               <input
                 type="date"
@@ -324,9 +334,13 @@ export default function CreanceForm({
         <section className="border-t border-slate-100 pt-5">
           <SectionTitle n="3">Suivi &amp; relances</SectionTitle>
           <div className="grid sm:grid-cols-2 gap-4 mt-3.5">
-            <Field label="Statut d'avancement">
+            <Field
+              label="Statut d'avancement"
+              error={errors.statut}
+              hint="Ajusté automatiquement selon paiements, relances et échéance."
+            >
               <select
-                className="field"
+                className={`field ${errors.statut ? "field-error" : ""}`}
                 value={f.statut}
                 onChange={(e) => set("statut", e.target.value as Statut)}
               >
@@ -336,6 +350,12 @@ export default function CreanceForm({
                   </option>
                 ))}
               </select>
+              {soldeZero && f.statut !== "Soldé" && (
+                <p className="flex items-start gap-1.5 text-[11px] font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-2.5 py-2 mt-1.5">
+                  <IconInfo className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                  Solde à 0 : la créance sera enregistrée comme « Soldé ».
+                </p>
+              )}
             </Field>
             <Field label="Réaction du client">
               <select
@@ -364,9 +384,7 @@ export default function CreanceForm({
                 <button
                   type="button"
                   className="btn btn-ghost btn-sm px-3"
-                  onClick={() =>
-                    set("nombreRelances", Math.max(0, f.nombreRelances - 1))
-                  }
+                  onClick={() => set("nombreRelances", Math.max(0, f.nombreRelances - 1))}
                   aria-label="Diminuer le nombre de relances"
                 >
                   −
@@ -377,10 +395,7 @@ export default function CreanceForm({
                   className="field font-mono text-center w-20"
                   value={f.nombreRelances}
                   onChange={(e) =>
-                    set(
-                      "nombreRelances",
-                      Math.max(0, Math.floor(Number(e.target.value) || 0))
-                    )
+                    set("nombreRelances", Math.max(0, Math.floor(Number(e.target.value) || 0)))
                   }
                 />
                 <button

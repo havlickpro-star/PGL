@@ -1,18 +1,18 @@
 import type { ReactNode } from "react";
 import type { Creance, Statut } from "../types";
 import { STATUT_META, STATUTS, solde } from "../types";
-import { calcTotaux, grouperParEntite, isUrgente } from "../lib/selectors";
 import {
-  daysFromToday,
-  fcfa,
-  fmtDate,
-  pct,
-  relativeLabel,
-} from "../lib/format";
+  calcTotaux,
+  effectiveStatut,
+  grouperParEntite,
+  isUrgente,
+} from "../lib/selectors";
+import { daysFromToday, fcfa, fmtDate, pct, relativeLabel } from "../lib/format";
 import DonutChart from "./DonutChart";
 import { StatutBadge, useCountUp } from "./ui";
 import {
   IconAlert,
+  IconBanknote,
   IconBell,
   IconCheck,
   IconList,
@@ -68,23 +68,14 @@ function KpiCard({
       className="card card-hover p-5 relative overflow-hidden animate-fade-up"
       style={{ animationDelay: `${delay}ms` }}
     >
-      <span
-        className="absolute top-0 left-0 right-0 h-[3px]"
-        style={{ background: t.bar }}
-      />
+      <span className="absolute top-0 left-0 right-0 h-[3px]" style={{ background: t.bar }} />
       <div className="flex items-start justify-between gap-3">
-        <p className="text-[11px] font-bold tracking-[0.12em] uppercase text-slate-500">
-          {label}
-        </p>
-        <span
-          className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${t.chip}`}
-        >
+        <p className="text-[11px] font-bold tracking-[0.12em] uppercase text-slate-500">{label}</p>
+        <span className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${t.chip}`}>
           {icon}
         </span>
       </div>
-      <p
-        className={`font-display text-[1.55rem] leading-tight font-bold tracking-tight mt-1.5 ${t.value}`}
-      >
+      <p className={`font-display text-[1.55rem] leading-tight font-bold tracking-tight mt-1.5 ${t.value}`}>
         {fcfa(v)}
       </p>
       <p className="text-xs text-slate-500 mt-1.5 font-medium">{sub}</p>
@@ -100,18 +91,10 @@ function KpiCard({
   );
 }
 
-function CardTitle({
-  children,
-  right,
-}: {
-  children: ReactNode;
-  right?: ReactNode;
-}) {
+function CardTitle({ children, right }: { children: ReactNode; right?: ReactNode }) {
   return (
     <div className="flex items-center justify-between gap-3 mb-4">
-      <h2 className="font-display font-semibold text-slate-900 text-[15px]">
-        {children}
-      </h2>
+      <h2 className="font-display font-semibold text-slate-900 text-[15px]">{children}</h2>
       {right}
     </div>
   );
@@ -123,6 +106,7 @@ interface Props {
   creances: Creance[];
   onEdit: (c: Creance) => void;
   onRelancer: (c: Creance) => void;
+  onPayer: (c: Creance) => void;
   onGoCreances: () => void;
   onGoSynthese: () => void;
 }
@@ -131,6 +115,7 @@ export default function Dashboard({
   creances,
   onEdit,
   onRelancer,
+  onPayer,
   onGoCreances,
   onGoSynthese,
 }: Props) {
@@ -140,7 +125,7 @@ export default function Dashboard({
     {} as Record<Statut, number>
   );
   creances.forEach((c) => {
-    counts[c.statut] += 1;
+    counts[effectiveStatut(c)] += 1;
   });
 
   const urgentes = creances
@@ -194,26 +179,16 @@ export default function Dashboard({
 
       <div className="grid gap-4 lg:grid-cols-5">
         {/* Répartition par statut */}
-        <div
-          className="card p-5 lg:col-span-2 animate-fade-up"
-          style={{ animationDelay: "220ms" }}
-        >
+        <div className="card p-5 lg:col-span-2 animate-fade-up" style={{ animationDelay: "220ms" }}>
           <CardTitle>Répartition par statut</CardTitle>
           <div className="flex flex-col sm:flex-row items-center gap-5">
             <DonutChart counts={counts} total={creances.length} />
             <ul className="grow w-full space-y-2">
               {STATUTS.map((s) => (
-                <li
-                  key={s}
-                  className="flex items-center gap-2.5 text-sm"
-                >
-                  <span
-                    className={`w-2.5 h-2.5 rounded-full shrink-0 ${STATUT_META[s].dot}`}
-                  />
+                <li key={s} className="flex items-center gap-2.5 text-sm">
+                  <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${STATUT_META[s].dot}`} />
                   <span className="text-slate-600 grow truncate">{s}</span>
-                  <span className="font-mono font-semibold text-slate-900 text-[13px]">
-                    {counts[s]}
-                  </span>
+                  <span className="font-mono font-semibold text-slate-900 text-[13px]">{counts[s]}</span>
                   <span className="text-[11px] text-slate-400 font-medium w-10 text-right">
                     {pct(counts[s], creances.length)} %
                   </span>
@@ -224,10 +199,7 @@ export default function Dashboard({
         </div>
 
         {/* Actions urgentes */}
-        <div
-          className="card p-5 lg:col-span-3 animate-fade-up"
-          style={{ animationDelay: "280ms" }}
-        >
+        <div className="card p-5 lg:col-span-3 animate-fade-up" style={{ animationDelay: "280ms" }}>
           <CardTitle
             right={
               <span className="inline-flex items-center gap-1.5 rounded-full bg-red-600 text-white px-2.5 py-0.5 text-xs font-bold">
@@ -252,9 +224,7 @@ export default function Dashboard({
               <span className="w-11 h-11 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mb-2.5">
                 <IconCheck className="w-5 h-5" />
               </span>
-              <p className="font-semibold text-slate-800 text-sm">
-                Aucune action urgente
-              </p>
+              <p className="font-semibold text-slate-800 text-sm">Aucune action urgente</p>
               <p className="text-xs text-slate-500 mt-0.5">
                 Aucun retard, aucun contentieux, aucune échéance dépassée.
               </p>
@@ -263,8 +233,7 @@ export default function Dashboard({
             <ul className="space-y-2.5 max-h-[380px] overflow-y-auto scroll-thin pr-1">
               {urgentes.map((c) => {
                 const overdue =
-                  c.prochaineActionDate &&
-                  daysFromToday(c.prochaineActionDate) < 0;
+                  c.prochaineActionDate && daysFromToday(c.prochaineActionDate) < 0;
                 return (
                   <li
                     key={c.id}
@@ -275,16 +244,15 @@ export default function Dashboard({
                     </span>
                     <div className="grow min-w-[170px]">
                       <p className="font-semibold text-slate-900 text-sm flex flex-wrap items-center gap-2">
+                        <span className="font-mono text-[11px] text-slate-400">{c.ref}</span>
                         {c.nomClient}
-                        <StatutBadge statut={c.statut} />
+                        <StatutBadge statut={effectiveStatut(c)} />
                       </p>
                       <p className="text-xs text-slate-600 mt-1">
                         {c.prochaineActionDate ? (
                           <>
                             {c.prochaineActionTexte && (
-                              <span className="font-semibold">
-                                {c.prochaineActionTexte} ·{" "}
-                              </span>
+                              <span className="font-semibold">{c.prochaineActionTexte} · </span>
                             )}
                             {fmtDate(c.prochaineActionDate)}
                             {overdue && (
@@ -302,14 +270,20 @@ export default function Dashboard({
                       </p>
                     </div>
                     <div className="text-right shrink-0">
-                      <p className="font-mono text-sm font-semibold text-red-700">
-                        {fcfa(solde(c))}
-                      </p>
+                      <p className="font-mono text-sm font-semibold text-red-700">{fcfa(solde(c))}</p>
                       <p className="text-[10px] uppercase tracking-wide text-slate-400 font-semibold">
                         restant dû
                       </p>
                     </div>
-                    <div className="flex gap-1.5 shrink-0">
+                    <div className="flex gap-1.5 shrink-0 flex-wrap">
+                      <button
+                        className="btn btn-ghost btn-sm"
+                        onClick={() => onPayer(c)}
+                        title="Enregistrer un paiement"
+                      >
+                        <IconBanknote className="w-3.5 h-3.5" />
+                        Payer
+                      </button>
                       <button
                         className="btn btn-ghost btn-sm"
                         onClick={() => onRelancer(c)}
@@ -318,10 +292,7 @@ export default function Dashboard({
                         <IconBell className="w-3.5 h-3.5" />
                         Relancer +1
                       </button>
-                      <button
-                        className="btn btn-primary btn-sm"
-                        onClick={() => onEdit(c)}
-                      >
+                      <button className="btn btn-primary btn-sm" onClick={() => onEdit(c)}>
                         Modifier
                       </button>
                     </div>
@@ -335,16 +306,10 @@ export default function Dashboard({
 
       <div className="grid gap-4 lg:grid-cols-5">
         {/* Plus gros soldes */}
-        <div
-          className="card p-5 lg:col-span-3 animate-fade-up"
-          style={{ animationDelay: "340ms" }}
-        >
+        <div className="card p-5 lg:col-span-3 animate-fade-up" style={{ animationDelay: "340ms" }}>
           <CardTitle
             right={
-              <button
-                className="btn btn-ghost btn-sm"
-                onClick={onGoSynthese}
-              >
+              <button className="btn btn-ghost btn-sm" onClick={onGoSynthese}>
                 <IconPie className="w-3.5 h-3.5" />
                 Synthèse complète
               </button>
@@ -353,21 +318,14 @@ export default function Dashboard({
             Plus gros soldes par client
           </CardTitle>
           {top.length === 0 ? (
-            <p className="text-sm text-slate-500 py-6 text-center">
-              Toutes les créances sont soldées.
-            </p>
+            <p className="text-sm text-slate-500 py-6 text-center">Toutes les créances sont soldées.</p>
           ) : (
             <ul>
               {top.map((e, i) => (
-                <li
-                  key={e.nom}
-                  className="py-2.5 border-b border-slate-100 last:border-0"
-                >
+                <li key={e.nom} className="py-2.5 border-b border-slate-100 last:border-0">
                   <div className="flex justify-between gap-3 items-baseline">
                     <p className="font-semibold text-sm text-slate-800 truncate">
-                      <span className="text-slate-400 font-mono text-xs mr-1.5">
-                        {i + 1}.
-                      </span>
+                      <span className="text-slate-400 font-mono text-xs mr-1.5">{i + 1}.</span>
                       {e.nom}
                     </p>
                     <p className="font-mono text-sm font-semibold text-slate-900 whitespace-nowrap">
@@ -392,10 +350,7 @@ export default function Dashboard({
         </div>
 
         {/* Raccourcis */}
-        <div
-          className="card p-5 lg:col-span-2 animate-fade-up"
-          style={{ animationDelay: "400ms" }}
-        >
+        <div className="card p-5 lg:col-span-2 animate-fade-up" style={{ animationDelay: "400ms" }}>
           <CardTitle>Raccourcis</CardTitle>
           <div className="space-y-2.5">
             <button
@@ -410,7 +365,7 @@ export default function Dashboard({
                   Ouvrir le suivi des créances
                 </span>
                 <span className="block text-xs text-slate-500">
-                  Filtrer, trier, relancer et modifier les fiches
+                  Paiements, relances, filtres et historique des fiches
                 </span>
               </span>
             </button>
@@ -432,8 +387,9 @@ export default function Dashboard({
             </button>
           </div>
           <p className="text-[11px] text-slate-400 leading-relaxed mt-4 border-t border-slate-100 pt-3.5">
-            Les données sont enregistrées automatiquement sur cet appareil à
-            chaque modification. Montants exprimés en FCFA.
+            Les paiements, relances et statuts sont journalisés sur chaque
+            créance. Données enregistrées automatiquement sur cet appareil —
+            montants en FCFA.
           </p>
         </div>
       </div>
