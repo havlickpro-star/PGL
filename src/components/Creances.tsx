@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { Creance, Statut } from "../types";
 import { STATUT_META, STATUTS, solde } from "../types";
 import { fcfa, fmtDate, relativeLabel, todayISO } from "../lib/format";
@@ -23,8 +23,15 @@ import {
   IconX,
 } from "./icons";
 
-type SortKey = "dateAchat" | "montantTotal" | "solde" | "dateEcheance";
-type SortDir = "asc" | "desc";
+export type SortKey = "dateAchat" | "montantTotal" | "solde" | "dateEcheance";
+export type SortDir = "asc" | "desc";
+
+/** Filtre/tri pré-appliqués (ex. clic sur une carte du tableau de bord). */
+export interface Preset {
+  statut?: "Tous" | Statut;
+  sortKey?: SortKey;
+  sortDir?: SortDir;
+}
 
 const DEFAULT_DIR: Record<SortKey, SortDir> = {
   dateAchat: "desc",
@@ -48,6 +55,7 @@ interface Props {
   onRelancer: (c: Creance) => void;
   onPayer: (c: Creance) => void;
   onDetail: (c: Creance) => void;
+  preset?: Preset | null;
 }
 
 function SortableTh({
@@ -110,6 +118,7 @@ export default function Creances({
   onRelancer,
   onPayer,
   onDetail,
+  preset,
 }: Props) {
   const [q, setQ] = useState("");
   const [fStatut, setFStatut] = useState<"Tous" | Statut>("Tous");
@@ -182,6 +191,16 @@ export default function Creances({
   }, [creances, q, fStatut, fEtab, fAgent, sortKey, sortDir]);
 
   const tFiltered = useMemo(() => calcTotaux(sorted), [sorted]);
+
+  // Filtre/tri demandés depuis le tableau de bord (cartes cliquables).
+  useEffect(() => {
+    if (!preset) return;
+    if (preset.statut) setFStatut(preset.statut);
+    if (preset.sortKey) {
+      setSortKey(preset.sortKey);
+      setSortDir(preset.sortDir ?? DEFAULT_DIR[preset.sortKey]);
+    }
+  }, [preset]);
 
   if (creances.length === 0) {
     return (

@@ -9,12 +9,15 @@ import {
 } from "../lib/selectors";
 import { daysFromToday, fcfa, fmtDate, pct, relativeLabel } from "../lib/format";
 import DonutChart from "./DonutChart";
+import type { StatutStats } from "./DonutChart";
 import { StatutBadge, useCountUp } from "./ui";
 import {
   IconAlert,
+  IconArrowRight,
   IconBanknote,
   IconBell,
   IconCheck,
+  IconInfo,
   IconList,
   IconPie,
   IconTrendUp,
@@ -29,18 +32,21 @@ const TONES = {
     chip: "bg-brand-100 text-brand-700",
     value: "text-brand-950",
     progress: "#2560b0",
+    link: "text-brand-600",
   },
   green: {
     bar: "#059669",
     chip: "bg-emerald-100 text-emerald-700",
     value: "text-emerald-700",
     progress: "#059669",
+    link: "text-emerald-700",
   },
   red: {
     bar: "#dc2626",
     chip: "bg-red-100 text-red-700",
     value: "text-red-700",
     progress: "#dc2626",
+    link: "text-red-700",
   },
 } as const;
 
@@ -48,30 +54,39 @@ function KpiCard({
   label,
   value,
   sub,
+  hint,
   icon,
   tone,
   delay,
   progress,
+  onClick,
 }: {
   label: string;
   value: number;
   sub: string;
+  hint: string;
   icon: ReactNode;
   tone: keyof typeof TONES;
   delay: number;
   progress?: number;
+  onClick: () => void;
 }) {
   const v = useCountUp(value);
   const t = TONES[tone];
   return (
-    <div
-      className="card card-hover p-5 relative overflow-hidden animate-fade-up"
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={`${label} — ${hint}`}
+      className="card card-hover p-5 relative overflow-hidden animate-fade-up text-left w-full group focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2"
       style={{ animationDelay: `${delay}ms` }}
     >
       <span className="absolute top-0 left-0 right-0 h-[3px]" style={{ background: t.bar }} />
       <div className="flex items-start justify-between gap-3">
         <p className="text-[11px] font-bold tracking-[0.12em] uppercase text-slate-500">{label}</p>
-        <span className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${t.chip}`}>
+        <span
+          className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 transition-transform duration-200 group-hover:scale-110 ${t.chip}`}
+        >
           {icon}
         </span>
       </div>
@@ -87,7 +102,13 @@ function KpiCard({
           />
         </div>
       )}
-    </div>
+      <p
+        className={`text-[11px] font-semibold mt-2.5 flex items-center gap-1 opacity-75 group-hover:opacity-100 transition-opacity ${t.link}`}
+      >
+        {hint}
+        <IconArrowRight className="w-3 h-3 transition-transform duration-200 group-hover:translate-x-0.5" />
+      </p>
+    </button>
   );
 }
 
@@ -109,6 +130,9 @@ interface Props {
   onPayer: (c: Creance) => void;
   onGoCreances: () => void;
   onGoSynthese: () => void;
+  onKpiAccordees: () => void;
+  onKpiRegle: () => void;
+  onKpiRestantDu: () => void;
 }
 
 export default function Dashboard({
@@ -118,14 +142,21 @@ export default function Dashboard({
   onPayer,
   onGoCreances,
   onGoSynthese,
+  onKpiAccordees,
+  onKpiRegle,
+  onKpiRestantDu,
 }: Props) {
   const t = calcTotaux(creances);
-  const counts = STATUTS.reduce(
-    (acc, s) => ({ ...acc, [s]: 0 }),
-    {} as Record<Statut, number>
+
+  const parStatut = STATUTS.reduce(
+    (acc, s) => ({ ...acc, [s]: { count: 0, accorde: 0, du: 0 } }),
+    {} as Record<Statut, StatutStats>
   );
   creances.forEach((c) => {
-    counts[effectiveStatut(c)] += 1;
+    const s = effectiveStatut(c);
+    parStatut[s].count += 1;
+    parStatut[s].accorde += c.montantTotal;
+    parStatut[s].du += solde(c);
   });
 
   const urgentes = creances
@@ -148,32 +179,38 @@ export default function Dashboard({
 
   return (
     <div className="space-y-5">
-      {/* Cartes de synthèse */}
+      {/* Cartes de synthèse — cliquables */}
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         <KpiCard
           label="Créances accordées"
           value={t.accorde}
           sub={`${creances.length} créance${creances.length > 1 ? "s" : ""} · ${nbEntites} entité${nbEntites > 1 ? "s" : ""}`}
+          hint="Voir toutes les créances"
           icon={<IconWallet className="w-4.5 h-4.5" />}
           tone="blue"
           delay={0}
+          onClick={onKpiAccordees}
         />
         <KpiCard
           label="Déjà réglé"
           value={t.regle}
           sub={`${recouvrement} % du total accordé`}
+          hint="Voir les créances soldées"
           icon={<IconTrendUp className="w-4.5 h-4.5" />}
           tone="green"
           delay={80}
           progress={recouvrement}
+          onClick={onKpiRegle}
         />
         <KpiCard
           label="Restant dû"
           value={t.du}
           sub={`${avecSolde} créance${avecSolde > 1 ? "s" : ""} avec un solde ouvert`}
+          hint="Trier par solde restant dû"
           icon={<IconAlert className="w-4.5 h-4.5" />}
           tone="red"
           delay={160}
+          onClick={onKpiRestantDu}
         />
       </div>
 
@@ -181,21 +218,12 @@ export default function Dashboard({
         {/* Répartition par statut */}
         <div className="card p-5 lg:col-span-2 animate-fade-up" style={{ animationDelay: "220ms" }}>
           <CardTitle>Répartition par statut</CardTitle>
-          <div className="flex flex-col sm:flex-row items-center gap-5">
-            <DonutChart counts={counts} total={creances.length} />
-            <ul className="grow w-full space-y-2">
-              {STATUTS.map((s) => (
-                <li key={s} className="flex items-center gap-2.5 text-sm">
-                  <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${STATUT_META[s].dot}`} />
-                  <span className="text-slate-600 grow truncate">{s}</span>
-                  <span className="font-mono font-semibold text-slate-900 text-[13px]">{counts[s]}</span>
-                  <span className="text-[11px] text-slate-400 font-medium w-10 text-right">
-                    {pct(counts[s], creances.length)} %
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </div>
+          <DonutChart stats={parStatut} total={creances.length} />
+          <p className="text-[11px] text-slate-400 mt-3 flex items-center gap-1.5">
+            <IconInfo className="w-3.5 h-3.5 shrink-0" />
+            Survolez un segment — ou touchez-le — pour afficher le détail ;
+            les infos disparaissent dès que le pointeur se retire.
+          </p>
         </div>
 
         {/* Actions urgentes */}

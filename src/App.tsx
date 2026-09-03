@@ -9,6 +9,7 @@ import Shell from "./components/Layout";
 import type { View } from "./components/Layout";
 import Dashboard from "./components/Dashboard";
 import Creances from "./components/Creances";
+import type { Preset } from "./components/Creances";
 import Synthese from "./components/Synthese";
 import CreanceForm from "./components/CreanceForm";
 import PaiementForm from "./components/PaiementForm";
@@ -27,6 +28,7 @@ export default function App() {
   const [toDelete, setToDelete] = useState<Creance | null>(null);
   const [detailId, setDetailId] = useState<string | null>(null);
   const [paiementFor, setPaiementFor] = useState<Creance | null>(null);
+  const [preset, setPreset] = useState<Preset | null>(null);
   const [toasts, setToasts] = useState<ToastItem[]>([]);
 
   const notify = useCallback((kind: ToastKind, msg: string) => {
@@ -54,6 +56,12 @@ export default function App() {
   const openNew = () => setForm({ open: true, creance: null });
   const openEdit = (c: Creance) => setForm({ open: true, creance: c });
   const closeForm = () => setForm({ open: false, creance: null });
+
+  /** Navigue vers le suivi des créances avec un filtre/tri pré-appliqué. */
+  const goCreances = (p: Preset) => {
+    setPreset({ ...p });
+    setView("creances");
+  };
   const detail = detailId ? creances.find((c) => c.id === detailId) ?? null : null;
 
   const handleSave = (d: DonneesCreance) => {
@@ -120,6 +128,11 @@ export default function App() {
             onPayer={(c) => setPaiementFor(c)}
             onGoCreances={() => setView("creances")}
             onGoSynthese={() => setView("synthese")}
+            onKpiAccordees={() =>
+              goCreances({ statut: "Tous", sortKey: "montantTotal", sortDir: "desc" })
+            }
+            onKpiRegle={() => goCreances({ statut: "Soldé" })}
+            onKpiRestantDu={() => goCreances({ sortKey: "solde", sortDir: "desc" })}
           />
         )}
         {view === "creances" && (
@@ -131,6 +144,7 @@ export default function App() {
             onRelancer={handleRelancer}
             onPayer={(c) => setPaiementFor(c)}
             onDetail={(c) => setDetailId(c.id)}
+            preset={preset}
           />
         )}
         {view === "synthese" && <Synthese creances={creances} onNew={openNew} />}
