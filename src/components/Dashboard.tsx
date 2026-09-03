@@ -7,17 +7,16 @@ import {
   grouperParEntite,
   isUrgente,
 } from "../lib/selectors";
-import { daysFromToday, fcfa, fmtDate, pct, relativeLabel } from "../lib/format";
+import { daysFromToday, fcfa, fmtDate, pct } from "../lib/format";
+import { pl, useT } from "../lib/i18n";
 import DonutChart from "./DonutChart";
 import type { StatutStats } from "./DonutChart";
 import { StatutBadge, useCountUp } from "./ui";
 import {
   IconAlert,
-  IconArrowRight,
   IconBanknote,
   IconBell,
   IconCheck,
-  IconInfo,
   IconList,
   IconPie,
   IconTrendUp,
@@ -32,21 +31,18 @@ const TONES = {
     chip: "bg-brand-100 text-brand-700",
     value: "text-brand-950",
     progress: "#2560b0",
-    link: "text-brand-600",
   },
   green: {
     bar: "#059669",
     chip: "bg-emerald-100 text-emerald-700",
     value: "text-emerald-700",
     progress: "#059669",
-    link: "text-emerald-700",
   },
   red: {
     bar: "#dc2626",
     chip: "bg-red-100 text-red-700",
     value: "text-red-700",
     progress: "#dc2626",
-    link: "text-red-700",
   },
 } as const;
 
@@ -54,21 +50,21 @@ function KpiCard({
   label,
   value,
   sub,
-  hint,
   icon,
   tone,
   delay,
   progress,
+  actionLabel,
   onClick,
 }: {
   label: string;
   value: number;
   sub: string;
-  hint: string;
   icon: ReactNode;
   tone: keyof typeof TONES;
   delay: number;
   progress?: number;
+  actionLabel: string;
   onClick: () => void;
 }) {
   const v = useCountUp(value);
@@ -77,16 +73,13 @@ function KpiCard({
     <button
       type="button"
       onClick={onClick}
-      aria-label={`${label} — ${hint}`}
-      className="card card-hover p-5 relative overflow-hidden animate-fade-up text-left w-full group focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2"
+      className="card card-hover p-5 relative overflow-hidden animate-fade-up text-left w-full group"
       style={{ animationDelay: `${delay}ms` }}
     >
       <span className="absolute top-0 left-0 right-0 h-[3px]" style={{ background: t.bar }} />
       <div className="flex items-start justify-between gap-3">
         <p className="text-[11px] font-bold tracking-[0.12em] uppercase text-slate-500">{label}</p>
-        <span
-          className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 transition-transform duration-200 group-hover:scale-110 ${t.chip}`}
-        >
+        <span className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${t.chip}`}>
           {icon}
         </span>
       </div>
@@ -102,12 +95,10 @@ function KpiCard({
           />
         </div>
       )}
-      <p
-        className={`text-[11px] font-semibold mt-2.5 flex items-center gap-1 opacity-75 group-hover:opacity-100 transition-opacity ${t.link}`}
-      >
-        {hint}
-        <IconArrowRight className="w-3 h-3 transition-transform duration-200 group-hover:translate-x-0.5" />
-      </p>
+      <span className="mt-2.5 inline-flex items-center gap-1 text-[11.5px] font-bold text-brand-600 group-hover:text-brand-700">
+        {actionLabel}
+        <span aria-hidden className="transition-transform duration-200 group-hover:translate-x-1">→</span>
+      </span>
     </button>
   );
 }
@@ -146,17 +137,19 @@ export default function Dashboard({
   onKpiRegle,
   onKpiRestantDu,
 }: Props) {
-  const t = calcTotaux(creances);
+  const i18n = useT();
+  const { t, relLabel } = i18n;
+  const tot = calcTotaux(creances);
 
-  const parStatut = STATUTS.reduce(
+  const stats = STATUTS.reduce(
     (acc, s) => ({ ...acc, [s]: { count: 0, accorde: 0, du: 0 } }),
     {} as Record<Statut, StatutStats>
   );
   creances.forEach((c) => {
-    const s = effectiveStatut(c);
-    parStatut[s].count += 1;
-    parStatut[s].accorde += c.montantTotal;
-    parStatut[s].du += solde(c);
+    const st = stats[effectiveStatut(c)];
+    st.count += 1;
+    st.accorde += c.montantTotal;
+    st.du += solde(c);
   });
 
   const urgentes = creances
@@ -175,41 +168,41 @@ export default function Dashboard({
   const maxDu = top.length > 0 ? top[0].du : 1;
   const nbEntites = new Set(creances.map((c) => c.nomClient.trim())).size;
   const avecSolde = creances.filter((c) => solde(c) > 0).length;
-  const recouvrement = pct(t.regle, t.accorde);
+  const recouvrement = pct(tot.regle, tot.accorde);
 
   return (
     <div className="space-y-5">
       {/* Cartes de synthèse — cliquables */}
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         <KpiCard
-          label="Créances accordées"
-          value={t.accorde}
-          sub={`${creances.length} créance${creances.length > 1 ? "s" : ""} · ${nbEntites} entité${nbEntites > 1 ? "s" : ""}`}
-          hint="Voir toutes les créances"
+          label={t("kpi.granted")}
+          value={tot.accorde}
+          sub={`${creances.length} ${pl(creances.length, i18n, "w.credit", "w.credits")} · ${nbEntites} ${pl(nbEntites, i18n, "w.entity", "w.entities")}`}
           icon={<IconWallet className="w-4.5 h-4.5" />}
           tone="blue"
           delay={0}
+          actionLabel={t("kpi.seeAll")}
           onClick={onKpiAccordees}
         />
         <KpiCard
-          label="Déjà réglé"
-          value={t.regle}
-          sub={`${recouvrement} % du total accordé`}
-          hint="Voir les créances soldées"
+          label={t("kpi.paid")}
+          value={tot.regle}
+          sub={t("kpi.paidSub", { pct: recouvrement })}
           icon={<IconTrendUp className="w-4.5 h-4.5" />}
           tone="green"
           delay={80}
           progress={recouvrement}
+          actionLabel={t("kpi.seePaid")}
           onClick={onKpiRegle}
         />
         <KpiCard
-          label="Restant dû"
-          value={t.du}
-          sub={`${avecSolde} créance${avecSolde > 1 ? "s" : ""} avec un solde ouvert`}
-          hint="Trier par solde restant dû"
+          label={t("kpi.remaining")}
+          value={tot.du}
+          sub={`${avecSolde} ${pl(avecSolde, { t } as never, "w.credit", "w.credits")} ${t("kpi.remainingRest")}`}
           icon={<IconAlert className="w-4.5 h-4.5" />}
           tone="red"
           delay={160}
+          actionLabel={t("kpi.seeRemaining")}
           onClick={onKpiRestantDu}
         />
       </div>
@@ -217,13 +210,8 @@ export default function Dashboard({
       <div className="grid gap-4 lg:grid-cols-5">
         {/* Répartition par statut */}
         <div className="card p-5 lg:col-span-2 animate-fade-up" style={{ animationDelay: "220ms" }}>
-          <CardTitle>Répartition par statut</CardTitle>
-          <DonutChart stats={parStatut} total={creances.length} />
-          <p className="text-[11px] text-slate-400 mt-3 flex items-center gap-1.5">
-            <IconInfo className="w-3.5 h-3.5 shrink-0" />
-            Survolez un segment — ou touchez-le — pour afficher le détail ;
-            les infos disparaissent dès que le pointeur se retire.
-          </p>
+          <CardTitle>{t("donut.title")}</CardTitle>
+          <DonutChart stats={stats} total={creances.length} />
         </div>
 
         {/* Actions urgentes */}
@@ -243,7 +231,7 @@ export default function Dashboard({
                   }`}
                 />
               </span>
-              Actions urgentes
+              {t("urgent.title")}
             </span>
           </CardTitle>
 
@@ -252,10 +240,8 @@ export default function Dashboard({
               <span className="w-11 h-11 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mb-2.5">
                 <IconCheck className="w-5 h-5" />
               </span>
-              <p className="font-semibold text-slate-800 text-sm">Aucune action urgente</p>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Aucun retard, aucun contentieux, aucune échéance dépassée.
-              </p>
+              <p className="font-semibold text-slate-800 text-sm">{t("urgent.none")}</p>
+              <p className="text-xs text-slate-500 mt-0.5">{t("urgent.noneDesc")}</p>
             </div>
           ) : (
             <ul className="space-y-2.5 max-h-[380px] overflow-y-auto scroll-thin pr-1">
@@ -285,43 +271,32 @@ export default function Dashboard({
                             {fmtDate(c.prochaineActionDate)}
                             {overdue && (
                               <span className="text-red-700 font-semibold">
-                                {" "}
-                                — {relativeLabel(c.prochaineActionDate)}
+                                {" "}— {relLabel(daysFromToday(c.prochaineActionDate))}
                               </span>
                             )}
                           </>
                         ) : (
-                          <span className="font-medium text-red-700">
-                            Statut critique — action à planifier
-                          </span>
+                          <span className="font-medium text-red-700">{t("urgent.critical")}</span>
                         )}
                       </p>
                     </div>
                     <div className="text-right shrink-0">
                       <p className="font-mono text-sm font-semibold text-red-700">{fcfa(solde(c))}</p>
                       <p className="text-[10px] uppercase tracking-wide text-slate-400 font-semibold">
-                        restant dû
+                        {t("urgent.remaining")}
                       </p>
                     </div>
                     <div className="flex gap-1.5 shrink-0 flex-wrap">
-                      <button
-                        className="btn btn-ghost btn-sm"
-                        onClick={() => onPayer(c)}
-                        title="Enregistrer un paiement"
-                      >
+                      <button className="btn btn-ghost btn-sm" onClick={() => onPayer(c)} title={t("row.payTitle")}>
                         <IconBanknote className="w-3.5 h-3.5" />
-                        Payer
+                        {t("urgent.pay")}
                       </button>
-                      <button
-                        className="btn btn-ghost btn-sm"
-                        onClick={() => onRelancer(c)}
-                        title="Incrémenter les relances et dater à aujourd'hui"
-                      >
+                      <button className="btn btn-ghost btn-sm" onClick={() => onRelancer(c)} title={t("urgent.remindTitle")}>
                         <IconBell className="w-3.5 h-3.5" />
-                        Relancer +1
+                        {t("urgent.remind")}
                       </button>
                       <button className="btn btn-primary btn-sm" onClick={() => onEdit(c)}>
-                        Modifier
+                        {t("urgent.edit")}
                       </button>
                     </div>
                   </li>
@@ -339,14 +314,14 @@ export default function Dashboard({
             right={
               <button className="btn btn-ghost btn-sm" onClick={onGoSynthese}>
                 <IconPie className="w-3.5 h-3.5" />
-                Synthèse complète
+                {t("top.synthese")}
               </button>
             }
           >
-            Plus gros soldes par client
+            {t("top.title")}
           </CardTitle>
           {top.length === 0 ? (
-            <p className="text-sm text-slate-500 py-6 text-center">Toutes les créances sont soldées.</p>
+            <p className="text-sm text-slate-500 py-6 text-center">{t("top.allPaid")}</p>
           ) : (
             <ul>
               {top.map((e, i) => (
@@ -368,7 +343,7 @@ export default function Dashboard({
                       />
                     </div>
                     <span className="text-[11px] text-slate-400 font-medium whitespace-nowrap">
-                      {e.count} créance{e.count > 1 ? "s" : ""}
+                      {e.count} {pl(e.count, { t } as never, "w.credit", "w.credits")}
                     </span>
                   </div>
                 </li>
@@ -379,7 +354,7 @@ export default function Dashboard({
 
         {/* Raccourcis */}
         <div className="card p-5 lg:col-span-2 animate-fade-up" style={{ animationDelay: "400ms" }}>
-          <CardTitle>Raccourcis</CardTitle>
+          <CardTitle>{t("shortcuts.title")}</CardTitle>
           <div className="space-y-2.5">
             <button
               className="w-full flex items-center gap-3 rounded-lg border border-slate-200 bg-white px-3.5 py-3 text-left hover:border-brand-300 hover:bg-brand-50/60 transition-all group"
@@ -389,12 +364,8 @@ export default function Dashboard({
                 <IconList className="w-4.5 h-4.5" />
               </span>
               <span>
-                <span className="block text-sm font-semibold text-slate-800">
-                  Ouvrir le suivi des créances
-                </span>
-                <span className="block text-xs text-slate-500">
-                  Paiements, relances, filtres et historique des fiches
-                </span>
+                <span className="block text-sm font-semibold text-slate-800">{t("shortcuts.creances")}</span>
+                <span className="block text-xs text-slate-500">{t("shortcuts.creancesDesc")}</span>
               </span>
             </button>
             <button
@@ -405,19 +376,13 @@ export default function Dashboard({
                 <IconPie className="w-4.5 h-4.5" />
               </span>
               <span>
-                <span className="block text-sm font-semibold text-slate-800">
-                  Voir la synthèse par entité
-                </span>
-                <span className="block text-xs text-slate-500">
-                  Encours consolidés client par client
-                </span>
+                <span className="block text-sm font-semibold text-slate-800">{t("shortcuts.synthese")}</span>
+                <span className="block text-xs text-slate-500">{t("shortcuts.syntheseDesc")}</span>
               </span>
             </button>
           </div>
           <p className="text-[11px] text-slate-400 leading-relaxed mt-4 border-t border-slate-100 pt-3.5">
-            Les paiements, relances et statuts sont journalisés sur chaque
-            créance. Données enregistrées automatiquement sur cet appareil —
-            montants en FCFA.
+            {t("shortcuts.note")}
           </p>
         </div>
       </div>

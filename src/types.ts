@@ -67,7 +67,20 @@ export interface Evenement {
   /** Horodatage ISO (yyyy-mm-ddTHH:MM) */
   date: string;
   type: EvenementType;
-  titre: string;
+  /** Champs structurés — rendus traduits dans la langue active. */
+  montant?: number;
+  note?: string;
+  payDate?: string;
+  from?: Statut;
+  to?: Statut;
+  cause?: "paiement" | "relance" | "modification";
+  relanceNum?: number;
+  agent?: string;
+  montantTotal?: number;
+  excel?: boolean;
+  reprise?: boolean;
+  /** Libellés bruts des événements hérités (avant l'i18n). */
+  titre?: string;
   detail?: string;
 }
 

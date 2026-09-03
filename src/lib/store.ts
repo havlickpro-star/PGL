@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import type { Creance, DonneesCreance, Evenement } from "../types";
 import { solde } from "../types";
 import { seedCreances } from "../data/seed";
-import { fcfa, fmtDate, fmtRef, nowISO, refNum, todayISO } from "./format";
+import { fmtRef, nowISO, refNum, todayISO } from "./format";
 import { effectiveStatut, statutApresPaiement } from "./selectors";
 
 const KEY_CREANCES = "goodluck.creances.v1";
@@ -41,13 +41,8 @@ let evSeq = 0;
 function eid(): string {
   return `ev-${Date.now()}-${++evSeq}`;
 }
-function ev(
-  type: Evenement["type"],
-  titre: string,
-  detail?: string,
-  date = nowISO()
-): Evenement {
-  return { id: eid(), date, type, titre, detail };
+function ev(data: Omit<Evenement, "id" | "date"> & { date?: string }): Evenement {
+  return { id: eid(), date: data.date ?? nowISO(), ...data };
 }
 
 type Brut = Omit<Creance, "ref" | "historique"> & {
@@ -64,16 +59,16 @@ function normalize(list: Brut[]): Creance[] {
     if (!Array.isArray(out.historique)) {
       const base = (out.dateAchat ?? todayISO()) + "T09:00";
       const h: Evenement[] = [
-        ev("creation", "Créance enregistrée", "Importée depuis la fiche PendingList.xlsm", base),
+        ev({
+          type: "creation",
+          excel: true,
+          montantTotal: out.montantTotal,
+          date: base,
+        }),
       ];
       if (out.montantRegle > 0) {
         h.push(
-          ev(
-            "paiement",
-            `Paiement de ${fcfa(out.montantRegle)}`,
-            "Reprise de l'historique Excel",
-            base
-          )
+          ev({ type: "paiement", montant: out.montantRegle, reprise: true, date: base })
         );
       }
       out.historique = h;
@@ -140,11 +135,11 @@ export function useCreances() {
         id: uid(),
         ref: fmtRef(next),
         historique: [
-          ev(
-            "creation",
-            "Créance créée",
-            `Créance de ${fcfa(d.montantTotal)} accordée${d.agent ? ` par ${d.agent}` : ""}`
-          ),
+          ev({
+            type: "creation",
+            montantTotal: d.montantTotal,
+            agent: d.agent || undefined,
+          }),
         ],
       };
       return [c, ...p];
@@ -162,9 +157,11 @@ export function useCreances() {
         else if (d.montantRegle > 0 && statut === "Non échu") statut = "Paiement partiel";
         const events: Evenement[] = [];
         if (statut !== old.statut) {
-          events.push(ev("statut", `Statut : ${old.statut} → ${statut}`, "Ajusté lors de la modification de la fiche"));
+          events.push(
+            ev({ type: "statut", from: old.statut, to: statut, cause: "modification" })
+          );
         } else {
-          events.push(ev("modification", "Fiche modifiée"));
+          events.push(ev({ type: "modification" }));
         }
         return { ...old, ...d, statut, historique: [...old.historique, ...events] };
       })
@@ -177,10 +174,12 @@ export function useCreances() {
   const relancer = (id: string) =>
     touch(id, (c) => {
       const eff = effectiveStatut(c);
-      const events: Evenement[] = [ev("relance", `Relance n° ${c.nombreRelances + 1}`)];
+      const events: Evenement[] = [
+        ev({ type: "relance", relanceNum: c.nombreRelances + 1 }),
+      ];
       let statut = c.statut;
       if (eff !== "Soldé" && eff !== "Contentieux" && statut !== "Relance") {
-        events.push(ev("statut", `Statut : ${statut} → Relance`, "Suite à la relance"));
+        events.push(ev({ type: "statut", from: statut, to: "Relance", cause: "relance" }));
         statut = "Relance";
       }
       return {
@@ -202,10 +201,16 @@ export function useCreances() {
       const m = Math.min(Math.max(0, Math.round(montant)), reste);
       const nouveauRegle = c.montantRegle + m;
       const statut = statutApresPaiement(c, nouveauRegle);
-      const detail = `${remarque ? remarque + " · " : ""}payé le ${fmtDate(datePaiement)}`;
-      const events: Evenement[] = [ev("paiement", `Paiement de ${fcfa(m)}`, detail)];
+      const events: Evenement[] = [
+        ev({
+          type: "paiement",
+          montant: m,
+          payDate: datePaiement,
+          note: remarque || undefined,
+        }),
+      ];
       if (statut !== c.statut) {
-        events.push(ev("statut", `Statut : ${c.statut} → ${statut}`, "Suite au paiement"));
+        events.push(ev({ type: "statut", from: c.statut, to: statut, cause: "paiement" }));
       }
       return {
         ...c,

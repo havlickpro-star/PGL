@@ -1,4 +1,13 @@
-const nf = new Intl.NumberFormat("fr-FR");
+let numLocale = "fr-FR";
+let nf: Intl.NumberFormat = new Intl.NumberFormat(numLocale);
+
+/** Adapte le format des nombres à la langue de l'application. */
+export function setNumLocale(locale: string) {
+  if (locale !== numLocale) {
+    numLocale = locale;
+    nf = new Intl.NumberFormat(locale);
+  }
+}
 
 /** Montant en FCFA, ex. « 1 350 000 FCFA » */
 export function fcfa(n: number): string {
@@ -40,13 +49,17 @@ export function relativeLabel(iso: string): string {
   return `dans ${d} j`;
 }
 
-export function dateLongue(): string {
-  return new Date().toLocaleDateString("fr-FR", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
+export function dateLongue(locale = "fr-FR"): string {
+  try {
+    return new Date().toLocaleDateString(locale, {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    });
+  } catch {
+    return new Date().toLocaleDateString();
+  }
 }
 
 export function pct(part: number, total: number): number {

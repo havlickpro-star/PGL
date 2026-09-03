@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { FormEvent } from "react";
 import { PASS, USER } from "../lib/store";
+import { useT } from "../lib/i18n";
 import {
   IconBell,
   IconEye,
@@ -12,8 +13,10 @@ import {
   IconUser,
   LogoClover,
 } from "./icons";
+import { LangPicker } from "./ui";
 
 export default function Login({ onSuccess }: { onSuccess: () => void }) {
+  const { t } = useT();
   const [user, setUser] = useState("");
   const [pass, setPass] = useState("");
   const [show, setShow] = useState(false);
@@ -47,40 +50,40 @@ export default function Login({ onSuccess }: { onSuccess: () => void }) {
         <LogoClover className="absolute -right-20 -bottom-24 w-[26rem] h-[26rem] text-brand-800/60 rotate-12" />
         <LogoClover className="absolute -left-10 -top-16 w-56 h-56 text-brand-900/80 -rotate-6" />
 
-        <div className="relative flex items-center gap-3">
-          <span className="w-11 h-11 rounded-xl bg-brand-600 flex items-center justify-center shadow-lg shadow-brand-950/60">
-            <LogoClover className="w-6 h-6 text-white" />
-          </span>
-          <div>
-            <p className="font-display font-bold text-xl leading-none tracking-tight">
-              GoodLuck
-            </p>
-            <p className="text-brand-300 text-xs mt-1 font-medium">
-              Vente à crédit · Suivi des créances
-            </p>
+        <div className="relative flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <span className="w-11 h-11 rounded-xl bg-brand-600 flex items-center justify-center shadow-lg shadow-brand-950/60">
+              <LogoClover className="w-6 h-6 text-white" />
+            </span>
+            <div>
+              <p className="font-display font-bold text-xl leading-none tracking-tight">
+                {t("login.brandName")}
+              </p>
+              <p className="text-brand-300 text-xs mt-1 font-medium">
+                {t("login.tagline")}
+              </p>
+            </div>
+          </div>
+          <div className="w-36 shrink-0">
+            <LangPicker dark />
           </div>
         </div>
 
         <div className="relative max-w-md">
           <h1 className="font-display text-4xl font-bold leading-[1.1] tracking-tight">
-            Vos créances,
+            {t("login.hero1")}
             <br />
-            sous contrôle.
+            {t("login.hero2")}
           </h1>
-          <p className="text-brand-200/90 mt-4 leading-relaxed">
-            Consignez chaque vente à crédit, suivez les règlements en FCFA et
-            relancez au bon moment — sans rien laisser filer.
-          </p>
+          <p className="text-brand-200/90 mt-4 leading-relaxed">{t("login.heroDesc")}</p>
           <ul className="mt-8 space-y-4">
             <li className="flex items-center gap-3.5">
               <span className="w-9 h-9 rounded-lg bg-brand-800/80 ring-1 ring-brand-700 flex items-center justify-center text-brand-200">
                 <IconTrendUp className="w-4.5 h-4.5" />
               </span>
               <div>
-                <p className="font-semibold text-sm">Recouvrement en temps réel</p>
-                <p className="text-brand-300 text-xs">
-                  Totaux accordés, réglés et restants calculés automatiquement.
-                </p>
+                <p className="font-semibold text-sm">{t("login.f1t")}</p>
+                <p className="text-brand-300 text-xs">{t("login.f1d")}</p>
               </div>
             </li>
             <li className="flex items-center gap-3.5">
@@ -88,10 +91,8 @@ export default function Login({ onSuccess }: { onSuccess: () => void }) {
                 <IconBell className="w-4.5 h-4.5" />
               </span>
               <div>
-                <p className="font-semibold text-sm">Relances organisées</p>
-                <p className="text-brand-300 text-xs">
-                  Prochaines actions et retards mis en évidence chaque jour.
-                </p>
+                <p className="font-semibold text-sm">{t("login.f2t")}</p>
+                <p className="text-brand-300 text-xs">{t("login.f2d")}</p>
               </div>
             </li>
             <li className="flex items-center gap-3.5">
@@ -99,59 +100,57 @@ export default function Login({ onSuccess }: { onSuccess: () => void }) {
                 <IconPie className="w-4.5 h-4.5" />
               </span>
               <div>
-                <p className="font-semibold text-sm">Synthèse par entité</p>
-                <p className="text-brand-300 text-xs">
-                  L'encours de chaque client regroupé en un coup d'œil.
-                </p>
+                <p className="font-semibold text-sm">{t("login.f3t")}</p>
+                <p className="text-brand-300 text-xs">{t("login.f3d")}</p>
               </div>
             </li>
           </ul>
         </div>
 
-        <p className="relative text-brand-400 text-xs">
-          © 2026 Ets GoodLuck — Espace de gestion interne
-        </p>
+        <p className="relative text-brand-400 text-xs">{t("login.footer")}</p>
       </aside>
 
       {/* Formulaire */}
       <main className="flex flex-col items-center justify-center p-6 sm:p-10 min-h-screen lg:min-h-0">
         <div className="w-full max-w-sm">
-          <div className="lg:hidden flex items-center gap-3 mb-8 justify-center">
-            <span className="w-10 h-10 rounded-xl bg-brand-950 flex items-center justify-center">
-              <LogoClover className="w-5.5 h-5.5 text-brand-300" />
-            </span>
-            <div>
-              <p className="font-display font-bold text-lg leading-none text-brand-950">
-                GoodLuck
-              </p>
-              <p className="text-slate-500 text-[11px] mt-0.5 font-medium">
-                Suivi des créances clients
-              </p>
+          <div className="lg:hidden flex items-center justify-between gap-3 mb-8">
+            <div className="flex items-center gap-3">
+              <span className="w-10 h-10 rounded-xl bg-brand-950 flex items-center justify-center">
+                <LogoClover className="w-5.5 h-5.5 text-brand-300" />
+              </span>
+              <div>
+                <p className="font-display font-bold text-lg leading-none text-brand-950">
+                  {t("login.brandName")}
+                </p>
+                <p className="text-slate-500 text-[11px] mt-0.5 font-medium">
+                  {t("login.brandSubMobile")}
+                </p>
+              </div>
+            </div>
+            <div className="w-32 shrink-0">
+              <LangPicker />
             </div>
           </div>
 
-          <div key={shakeKey} className={`card p-7 sm:p-8 ${err ? "animate-shake" : "animate-fade-up"}`}>
+          <div
+            key={shakeKey}
+            className={`card p-7 sm:p-8 ${err ? "animate-shake" : "animate-fade-up"}`}
+          >
             <div className="flex items-center gap-2 text-brand-700 mb-5">
               <IconLock className="w-4 h-4" />
               <span className="text-[11px] font-bold tracking-[0.14em] uppercase">
-                Accès sécurisé
+                {t("login.access")}
               </span>
             </div>
             <h2 className="font-display text-2xl font-bold text-slate-900 tracking-tight">
-              Connexion
+              {t("login.title")}
             </h2>
-            <p className="text-sm text-slate-500 mt-1">
-              Espace réservé à l'établissement. Identifiant unique, sans
-              inscription.
-            </p>
+            <p className="text-sm text-slate-500 mt-1">{t("login.subtitle")}</p>
 
             <form onSubmit={submit} className="mt-6 space-y-4" noValidate>
               <div>
-                <label
-                  htmlFor="gl-user"
-                  className="block text-xs font-semibold text-slate-600 mb-1.5"
-                >
-                  Nom d'utilisateur
+                <label htmlFor="gl-user" className="block text-xs font-semibold text-slate-600 mb-1.5">
+                  {t("login.username")}
                 </label>
                 <div className="relative">
                   <IconUser className="w-4.5 h-4.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -160,7 +159,7 @@ export default function Login({ onSuccess }: { onSuccess: () => void }) {
                     type="text"
                     autoComplete="username"
                     className={`field pl-9.5 ${err ? "field-error" : ""}`}
-                    placeholder="Votre identifiant"
+                    placeholder={t("login.usernamePh")}
                     value={user}
                     onChange={(e) => setUser(e.target.value)}
                     autoFocus
@@ -168,11 +167,8 @@ export default function Login({ onSuccess }: { onSuccess: () => void }) {
                 </div>
               </div>
               <div>
-                <label
-                  htmlFor="gl-pass"
-                  className="block text-xs font-semibold text-slate-600 mb-1.5"
-                >
-                  Mot de passe
+                <label htmlFor="gl-pass" className="block text-xs font-semibold text-slate-600 mb-1.5">
+                  {t("login.password")}
                 </label>
                 <div className="relative">
                   <IconLock className="w-4.5 h-4.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -189,46 +185,33 @@ export default function Login({ onSuccess }: { onSuccess: () => void }) {
                     type="button"
                     className="absolute right-2 top-1/2 -translate-y-1/2 icon-btn w-7.5 h-7.5"
                     onClick={() => setShow((s) => !s)}
-                    aria-label={show ? "Masquer le mot de passe" : "Afficher le mot de passe"}
+                    aria-label={show ? t("login.hidePass") : t("login.showPass")}
                   >
-                    {show ? (
-                      <IconEyeOff className="w-4 h-4" />
-                    ) : (
-                      <IconEye className="w-4 h-4" />
-                    )}
+                    {show ? <IconEyeOff className="w-4 h-4" /> : <IconEye className="w-4 h-4" />}
                   </button>
                 </div>
               </div>
 
               {err && (
-                <p
-                  role="alert"
-                  className="text-sm font-medium text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2.5 animate-fade-in"
-                >
-                  Identifiants incorrects. Veuillez réessayer.
+                <p role="alert" className="text-sm font-medium text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2.5 animate-fade-in">
+                  {t("login.error")}
                 </p>
               )}
 
-              <button
-                type="submit"
-                className="btn btn-primary w-full py-2.5"
-                disabled={loading}
-              >
+              <button type="submit" className="btn btn-primary w-full py-2.5" disabled={loading}>
                 {loading ? (
                   <>
                     <IconSpinner className="w-4.5 h-4.5" />
-                    Vérification…
+                    {t("login.checking")}
                   </>
                 ) : (
-                  "Se connecter"
+                  t("login.submit")
                 )}
               </button>
             </form>
           </div>
 
-          <p className="text-center text-xs text-slate-400 mt-6">
-            Les données sont enregistrées localement sur cet appareil.
-          </p>
+          <p className="text-center text-xs text-slate-400 mt-6">{t("login.localNote")}</p>
         </div>
       </main>
     </div>
