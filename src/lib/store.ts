@@ -11,8 +11,12 @@ const KEY_SEED_VERSION = "goodluck.seedVersion.v1";
  * À incrémenter chaque fois que le jeu de données initial évolue
  * (nouvelle créance importée, correction d'un montant, etc.).
  * v2 : ajout de la créance supplémentaire de Mr Tushar (731 850 FCFA).
+ * v3 : annulation — suppression du doublon gl-21 (retour au jeu d'origine).
  */
-const SEED_VERSION = 2;
+const SEED_VERSION = 3;
+
+/** Identifiants de créances retirées du jeu initial (migrations de suppression). */
+const SUPPRIMEES: Record<number, string[]> = { 3: ["gl-21"] };
 
 function writeSeedVersion(v: number) {
   try {
@@ -57,6 +61,17 @@ function load(): Creance[] {
   // absentes sont réinjectées, sans toucher aux fiches déjà présentes
   // (ni aux créances ajoutées/modifiées par l'utilisateur).
   if (version < SEED_VERSION) {
+    // Suppressions liées aux migrations (ex. doublon retiré).
+    const aRetirer = new Set<string>();
+    for (const v of Object.keys(SUPPRIMEES)) {
+      if (version < Number(v)) {
+        SUPPRIMEES[Number(v)].forEach((id) => aRetirer.add(id));
+      }
+    }
+    if (aRetirer.size > 0) {
+      saved = saved.filter((c) => !aRetirer.has(c.id));
+    }
+
     const ids = new Set(saved.map((c) => c.id));
     const manquantes = seedCreances.filter((c) => !ids.has(c.id));
     if (manquantes.length > 0) saved = [...manquantes, ...saved];

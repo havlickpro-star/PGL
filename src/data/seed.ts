@@ -306,19 +306,4 @@ export const seedCreances: Creance[] = [
     prochaineActionTexte: "Rappel",
     prochaineActionDate: "2026-09-05",
   },
-  {
-    // Créance supplémentaire ajoutée à la demande de l'utilisateur.
-    id: "gl-21",
-    ...base,
-    nomClient: "Mr Tushar",
-    typeEtab: "Particulier",
-    adresse: "Camp Clairon",
-    telephone: "05 777 66 66",
-    responsableClient: "Mr Tushar",
-    agent: "Manu",
-    dateAchat: null,
-    montantTotal: 731850,
-    montantRegle: 0,
-    remarques: "Dette supplémentaire enregistrée à la demande de GoodLuck.",
-  },
 ];
