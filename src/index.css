@@ -1,1 +1,204 @@
 @import "tailwindcss";
+
+@theme {
+  --font-display: "Space Grotesk", "IBM Plex Sans", ui-sans-serif, sans-serif;
+  --font-sans: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", monospace;
+
+  --color-brand-50: #f0f5fc;
+  --color-brand-100: #e0eaf9;
+  --color-brand-200: #c4d8f3;
+  --color-brand-300: #9bc0ea;
+  --color-brand-400: #6ba0dc;
+  --color-brand-500: #3f7ccb;
+  --color-brand-600: #2560b0;
+  --color-brand-700: #1d4e90;
+  --color-brand-800: #1a4073;
+  --color-brand-900: #16355c;
+  --color-brand-950: #0c2140;
+
+  --animate-fade-up: fade-up 0.55s cubic-bezier(0.22, 0.9, 0.35, 1) both;
+  --animate-fade-in: fade-in 0.28s ease both;
+  --animate-scale-in: scale-in 0.26s cubic-bezier(0.22, 0.9, 0.35, 1) both;
+  --animate-slide-in: slide-in 0.35s cubic-bezier(0.22, 0.9, 0.35, 1) both;
+  --animate-shake: shake 0.45s ease both;
+  --animate-pulse-soft: pulse-soft 1.8s ease-in-out infinite;
+}
+
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes scale-in {
+  from { opacity: 0; transform: scale(0.96) translateY(10px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+@keyframes slide-in {
+  from { opacity: 0; transform: translateX(26px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+@keyframes shake {
+  10%, 90% { transform: translateX(-1px); }
+  20%, 80% { transform: translateX(2px); }
+  30%, 50%, 70% { transform: translateX(-4px); }
+  40%, 60% { transform: translateX(4px); }
+}
+@keyframes pulse-soft {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  background-color: #eef3f9;
+  color: #1e293b;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+@layer components {
+  /* ---- Fond ambiant de l'application ---- */
+  .app-bg {
+    background-color: #eef3f9;
+    background-image:
+      radial-gradient(900px 480px at 88% -8%, rgba(37, 96, 176, 0.12), transparent 62%),
+      radial-gradient(760px 460px at -12% 108%, rgba(12, 33, 64, 0.1), transparent 60%);
+    background-attachment: fixed;
+  }
+  .grid-overlay {
+    background-image:
+      linear-gradient(rgba(22, 53, 92, 0.045) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(22, 53, 92, 0.045) 1px, transparent 1px);
+    background-size: 34px 34px;
+    -webkit-mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.9), transparent 75%);
+    mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.9), transparent 75%);
+  }
+
+  /* ---- Cartes ---- */
+  .card {
+    background: #ffffff;
+    border: 1px solid #dce5f0;
+    border-radius: 0.75rem;
+    box-shadow: 0 1px 2px rgba(12, 33, 64, 0.06);
+  }
+  .card-hover {
+    transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+  }
+  .card-hover:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 24px -12px rgba(12, 33, 64, 0.22);
+    border-color: #c4d8f3;
+  }
+
+  /* ---- Boutons ---- */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    font-weight: 600;
+    font-size: 0.875rem;
+    border-radius: 0.5rem;
+    padding: 0.55rem 1rem;
+    transition: all 0.15s ease;
+    cursor: pointer;
+    white-space: nowrap;
+    border: 1px solid transparent;
+  }
+  .btn:active { transform: translateY(1px); }
+  .btn-primary {
+    background: var(--color-brand-600);
+    color: #fff;
+    box-shadow: 0 1px 2px rgba(12, 33, 64, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.14);
+  }
+  .btn-primary:hover { background: var(--color-brand-700); }
+  .btn-ghost {
+    background: #fff;
+    color: #334155;
+    border-color: #cbd5e1;
+  }
+  .btn-ghost:hover { background: #f1f5f9; border-color: #94a3b8; }
+  .btn-danger { background: #dc2626; color: #fff; }
+  .btn-danger:hover { background: #b91c1c; }
+  .btn-sm { padding: 0.32rem 0.65rem; font-size: 0.8rem; border-radius: 0.45rem; }
+  .icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 0.45rem;
+    color: #64748b;
+    transition: all 0.15s ease;
+    cursor: pointer;
+  }
+  .icon-btn:hover { background: #e2e8f0; color: #0f172a; }
+  .icon-btn-danger:hover { background: #fee2e2; color: #dc2626; }
+
+  /* ---- Champs de formulaire ---- */
+  .field {
+    width: 100%;
+    border: 1px solid #c7d3e2;
+    border-radius: 0.5rem;
+    background: #fff;
+    padding: 0.52rem 0.75rem;
+    font-size: 0.875rem;
+    color: #0f172a;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+  .field:focus {
+    outline: none;
+    border-color: var(--color-brand-500);
+    box-shadow: 0 0 0 3px rgba(63, 124, 203, 0.18);
+  }
+  .field::placeholder { color: #94a3b8; }
+  .field-error { border-color: #dc2626 !important; }
+  .field-error:focus { box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.15); }
+
+  /* ---- Navigation ---- */
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    width: 100%;
+    padding: 0.6rem 0.8rem;
+    border-radius: 0.55rem;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: rgba(224, 234, 249, 0.72);
+    transition: all 0.15s ease;
+    cursor: pointer;
+    text-align: left;
+  }
+  .nav-item:hover { color: #fff; background: rgba(255, 255, 255, 0.07); }
+  .nav-item.active {
+    color: #fff;
+    background: rgba(63, 124, 203, 0.4);
+    box-shadow: inset 0 0 0 1px rgba(155, 192, 234, 0.35);
+  }
+}
+
+/* ---- Barres de défilement fines ---- */
+.scroll-thin::-webkit-scrollbar { height: 8px; width: 8px; }
+.scroll-thin::-webkit-scrollbar-thumb { background: #c3d0e0; border-radius: 8px; }
+.scroll-thin::-webkit-scrollbar-thumb:hover { background: #a9bbd2; }
+.scroll-thin::-webkit-scrollbar-track { background: transparent; }
+
+/* ---- Anneau du donut ---- */
+.donut-seg {
+  transition: stroke-dasharray 0.9s cubic-bezier(0.22, 0.9, 0.35, 1),
+    stroke-width 0.15s ease, opacity 0.15s ease;
+  cursor: pointer;
+}
+.donut-seg:hover { stroke-width: 26; }
