@@ -1,4 +1,4 @@
-import type { Creance } from "../types";
+import type { Creance, Statut } from "../types";
 import { solde } from "../types";
 import { todayISO } from "./format";
 
@@ -20,12 +20,55 @@ export function calcTotaux(list: Creance[]): Totaux {
 }
 
 /**
+ * Statut réel et toujours cohérent d'une créance, dérivé de ses montants,
+ * relances et dates — jamais en contradiction avec le solde.
+ *
+ * Règles :
+ *  - solde à 0                    → « Soldé »
+ *  - « Contentieux »              → conservé (dossier juridique)
+ *  - « En retard » ou échéance
+ *    dépassée avec solde > 0      → « En retard »
+ *  - « Relance »                  → conservé
+ *  - paiements partiels           → « Paiement partiel »
+ *  - sinon                        → « Non échu »
+ */
+export function effectiveStatut(c: Creance, today = todayISO()): Statut {
+  const s = solde(c);
+  if (s === 0) return "Soldé";
+  if (c.statut === "Contentieux") return "Contentieux";
+  if (c.statut === "En retard") return "En retard";
+  if (c.dateEcheance && c.dateEcheance < today) return "En retard";
+  if (c.statut === "Relance") return "Relance";
+  if (c.montantRegle > 0) return "Paiement partiel";
+  return "Non échu";
+}
+
+/** Statut à appliquer après un paiement, en préservant retard / contentieux. */
+export function statutApresPaiement(c: Creance, nouveauRegle: number): Statut {
+  if (c.montantTotal - nouveauRegle <= 0) return "Soldé";
+  if (c.statut === "Contentieux" || c.statut === "En retard") return c.statut;
+  if (nouveauRegle > 0) return "Paiement partiel";
+  return c.statut;
+}
+
+/** « Paiement partiel » affiché en information secondaire (retard / contentieux). */
+export function estPartiel(c: Creance): boolean {
+  const eff = effectiveStatut(c);
+  return (
+    c.montantRegle > 0 &&
+    solde(c) > 0 &&
+    (eff === "En retard" || eff === "Contentieux")
+  );
+}
+
+/**
  * Une créance nécessite une action urgente si :
- *  - son statut est « En retard » ou « Contentieux »,
+ *  - son statut réel est « En retard » ou « Contentieux »,
  *  - ou si sa date de prochaine action est dépassée (et qu'il reste un solde).
  */
 export function isUrgente(c: Creance): boolean {
-  if (c.statut === "En retard" || c.statut === "Contentieux") return true;
+  const eff = effectiveStatut(c);
+  if (eff === "En retard" || eff === "Contentieux") return true;
   return (
     !!c.prochaineActionDate &&
     c.prochaineActionDate < todayISO() &&

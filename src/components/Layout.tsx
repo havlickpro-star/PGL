@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { dateLongue } from "../lib/format";
+import { LANG_META, useT } from "../lib/i18n";
 import {
   IconDashboard,
   IconList,
@@ -8,29 +9,9 @@ import {
   IconPlus,
   LogoClover,
 } from "./icons";
+import { LangPicker } from "./ui";
 
 export type View = "dashboard" | "creances" | "synthese";
-
-const NAV: { id: View; label: string; icon: (p: { className?: string }) => ReactNode }[] = [
-  { id: "dashboard", label: "Tableau de bord", icon: (p) => <IconDashboard {...p} /> },
-  { id: "creances", label: "Suivi des créances", icon: (p) => <IconList {...p} /> },
-  { id: "synthese", label: "Synthèse par entité", icon: (p) => <IconPie {...p} /> },
-];
-
-const VIEW_META: Record<View, { title: string; desc: string }> = {
-  dashboard: {
-    title: "Tableau de bord",
-    desc: "Vue d'ensemble des créances et des actions à mener aujourd'hui.",
-  },
-  creances: {
-    title: "Suivi des créances",
-    desc: "Toutes vos ventes à crédit, du premier jour jusqu'au solde final.",
-  },
-  synthese: {
-    title: "Synthèse par entité",
-    desc: "Encours regroupés automatiquement par client / établissement.",
-  },
-};
 
 interface ShellProps {
   view: View;
@@ -40,13 +21,21 @@ interface ShellProps {
   children: ReactNode;
 }
 
-export default function Shell({
-  view,
-  onNavigate,
-  onLogout,
-  onNew,
-  children,
-}: ShellProps) {
+export default function Shell({ view, onNavigate, onLogout, onNew, children }: ShellProps) {
+  const { t, lang } = useT();
+
+  const NAV: { id: View; label: string; icon: (p: { className?: string }) => ReactNode }[] = [
+    { id: "dashboard", label: t("nav.dashboard"), icon: (p) => <IconDashboard {...p} /> },
+    { id: "creances", label: t("nav.creances"), icon: (p) => <IconList {...p} /> },
+    { id: "synthese", label: t("nav.synthese"), icon: (p) => <IconPie {...p} /> },
+  ];
+
+  const VIEW_META: Record<View, { title: string; desc: string }> = {
+    dashboard: { title: t("view.dashboard.title"), desc: t("view.dashboard.desc") },
+    creances: { title: t("view.creances.title"), desc: t("view.creances.desc") },
+    synthese: { title: t("view.synthese.title"), desc: t("view.synthese.desc") },
+  };
+
   const meta = VIEW_META[view];
 
   return (
@@ -69,7 +58,7 @@ export default function Shell({
                 GoodLuck
               </p>
               <p className="text-brand-300 text-[11px] mt-1 font-medium">
-                Suivi des créances
+                {t("app.subtitle")}
               </p>
             </div>
           </div>
@@ -88,43 +77,46 @@ export default function Shell({
           ))}
         </nav>
 
-        <div className="mt-auto p-3 border-t border-white/10 space-y-2">
+        <div className="mt-auto p-3 border-t border-white/10 space-y-2.5">
+          <div className="px-2">
+            <LangPicker dark />
+          </div>
           <div className="flex items-center gap-3 px-2 py-1.5">
             <span className="w-9 h-9 rounded-full bg-brand-700 ring-1 ring-brand-500/60 flex items-center justify-center font-display font-bold text-sm">
               GL
             </span>
             <div className="min-w-0">
-              <p className="text-sm font-semibold leading-tight truncate">
-                Ets GoodLuck
-              </p>
-              <p className="text-brand-300 text-[11px]">Compte unique</p>
+              <p className="text-sm font-semibold leading-tight truncate">Ets GoodLuck</p>
+              <p className="text-brand-300 text-[11px]">{t("layout.account")}</p>
             </div>
           </div>
-          <button
-            className="nav-item text-brand-200 hover:text-white"
-            onClick={onLogout}
-          >
+          <button className="nav-item text-brand-200 hover:text-white" onClick={onLogout}>
             <IconLogout className="w-5 h-5" />
-            Déconnexion
+            {t("layout.logout")}
           </button>
         </div>
       </aside>
 
       {/* Barre supérieure (mobile) */}
-      <header className="lg:hidden sticky top-0 z-40 bg-brand-950 text-white flex items-center justify-between px-4 h-14 shadow-md">
-        <div className="flex items-center gap-2.5">
-          <span className="w-8.5 h-8.5 rounded-lg bg-brand-600 flex items-center justify-center">
+      <header className="lg:hidden sticky top-0 z-40 bg-brand-950 text-white flex items-center justify-between gap-2 px-4 h-14 shadow-md">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <span className="w-8.5 h-8.5 rounded-lg bg-brand-600 flex items-center justify-center shrink-0">
             <LogoClover className="w-4.5 h-4.5 text-white" />
           </span>
-          <p className="font-display font-bold tracking-tight">GoodLuck</p>
+          <p className="font-display font-bold tracking-tight truncate">GoodLuck</p>
         </div>
-        <button
-          className="flex items-center gap-1.5 text-brand-200 hover:text-white text-sm font-medium px-2 py-1.5 rounded-lg transition-colors"
-          onClick={onLogout}
-        >
-          <IconLogout className="w-4.5 h-4.5" />
-          Quitter
-        </button>
+        <div className="flex items-center gap-2.5 shrink-0">
+          <div className="w-28">
+            <LangPicker dark showLabel={false} />
+          </div>
+          <button
+            className="flex items-center gap-1.5 text-brand-200 hover:text-white text-sm font-medium px-2 py-1.5 rounded-lg transition-colors"
+            onClick={onLogout}
+          >
+            <IconLogout className="w-4.5 h-4.5" />
+            <span className="hidden sm:inline">{t("layout.logoutShort")}</span>
+          </button>
+        </div>
       </header>
 
       {/* Contenu */}
@@ -142,12 +134,12 @@ export default function Shell({
             </div>
             <div className="flex items-center gap-3 animate-fade-up">
               <span className="hidden md:inline-flex items-center rounded-lg bg-white border border-slate-200 px-3 py-2 text-xs font-medium text-slate-500 capitalize shadow-sm">
-                {dateLongue()}
+                {dateLongue(LANG_META[lang].num)}
               </span>
               <button className="btn btn-primary" onClick={onNew}>
                 <IconPlus className="w-4.5 h-4.5" />
-                <span className="hidden sm:inline">Nouvelle créance</span>
-                <span className="sm:hidden">Créance</span>
+                <span className="hidden sm:inline">{t("layout.new")}</span>
+                <span className="sm:hidden">{t("layout.newShort")}</span>
               </button>
             </div>
           </div>

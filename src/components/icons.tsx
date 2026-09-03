@@ -258,3 +258,33 @@ export const IconSpinner = ({ className = "w-5 h-5" }: IconProps) => (
     />
   </svg>
 );
+
+export const IconBanknote = (p: IconProps) => (
+  <S {...p}>
+    <rect x="2" y="6" width="20" height="12" rx="2" />
+    <circle cx="12" cy="12" r="2.5" />
+    <path d="M6 12h.01M18 12h.01" />
+  </S>
+);
+
+export const IconArrowRight = (p: IconProps) => (
+  <S {...p}>
+    <path d="M5 12h14M13 6l6 6-6 6" />
+  </S>
+);
+
+export const IconGlobe = (p: IconProps) => (
+  <S {...p}>
+    <circle cx="12" cy="12" r="9" />
+    <path d="M3 12h18" />
+    <path d="M12 3a15 15 0 0 1 0 18 15 15 0 0 1 0-18Z" />
+  </S>
+);
+
+export const IconHistory = (p: IconProps) => (
+  <S {...p}>
+    <path d="M3 12a9 9 0 1 0 3-6.7L3 8" />
+    <path d="M3 3v5h5" />
+    <path d="M12 7v5l3 2" />
+  </S>
+);

@@ -1,12 +1,20 @@
 import type { Creance } from "../types";
 
 /**
- * 20 créances réelles importées depuis la fiche « PendingList.xlsm ».
+ * 20 créances réelles importées depuis la fiche « PendingList.xlsm »,
+ * + la créance supplémentaire de Mr Tushar (731 850 FCFA) ajoutée
+ *   à la demande de l'utilisateur.
  * Chargées automatiquement au premier lancement de l'application.
  */
 const base: Omit<
   Creance,
-  "id" | "nomClient" | "typeEtab" | "montantTotal" | "montantRegle"
+  | "id"
+  | "ref"
+  | "historique"
+  | "nomClient"
+  | "typeEtab"
+  | "montantTotal"
+  | "montantRegle"
 > = {
   adresse: "",
   telephone: "",
@@ -23,7 +31,7 @@ const base: Omit<
   remarques: "",
 };
 
-export const seedCreances: Creance[] = [
+export const seedCreances: Omit<Creance, "ref" | "historique">[] = [
   {
     id: "gl-01",
     ...base,
